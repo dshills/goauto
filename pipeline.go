@@ -56,7 +56,7 @@ func (p *Pipeline) AddWatch(watchDir string) (string, error) {
 }
 
 // AddRecWatch adds a GOPATH relative or absolute path to watch recursivly
-func (p *Pipeline) AddRecWatch(watchDir string) error {
+func (p *Pipeline) AddRecWatch(watchDir string, ignoreHidden bool) error {
 	d, err := AbsPath(watchDir)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (p *Pipeline) AddRecWatch(watchDir string) error {
 		}
 		if info.IsDir() {
 			// HACKY skip hidden dir
-			if info.Name()[:1] == "." {
+			if (info.Name()[:1] == ".") && ignoreHidden {
 				return filepath.SkipDir
 			}
 			p.AddWatch(path)
@@ -148,7 +148,7 @@ func (p *Pipeline) doWorkflow(fpath string) {
 	f := filepath.Base(fpath)
 	for _, wf := range p.Workflows {
 		if wf.Match(f) {
-			go wf.Run(fpath, p.Wout, p.Werr)
+			wf.Run(&TaskInfo{Src: fpath, Tout: p.Wout, Terr: p.Werr})
 		}
 	}
 }

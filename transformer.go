@@ -6,7 +6,18 @@ package goauto
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
+
+// A Transformer is a function that changes a string to a string
+// Transforms are used to build Targets in Tasks
+// A common example would be to change myfile.scss to myfile.css
+type Transformer func(string) string
+
+// Identity returns itself
+func Identity(f string) string {
+	return f
+}
 
 // GoRelBase returns the file path relative to $GOPATH
 func GoRelBase(f string) string {
@@ -39,4 +50,11 @@ func GoRelSrcDir(f string) string {
 		return ""
 	}
 	return rel
+}
+
+func extTransformer(newExt string) Transformer {
+	return func(f string) string {
+		b := strings.TrimSuffix(f, filepath.Ext(f))
+		return b + "." + newExt
+	}
 }

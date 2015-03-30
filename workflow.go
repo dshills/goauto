@@ -5,7 +5,6 @@ package goauto
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"regexp"
 	"time"
@@ -15,13 +14,13 @@ import (
 type Workflow struct {
 	Name   string
 	Regexs []*regexp.Regexp
-	Tasks  []*Task
+	Tasks  []Tasker
 }
 
 // NewWorkflow returns a Workflow with one pattern and one task
 // An invlid regexp pattern will cause a panic
-func NewWorkflow(name, pattern string, task *Task) *Workflow {
-	return &Workflow{name, []*regexp.Regexp{regexp.MustCompile(pattern)}, []*Task{task}}
+func NewWorkflow(name, pattern string, task Tasker) *Workflow {
+	return &Workflow{name, []*regexp.Regexp{regexp.MustCompile(pattern)}, []Tasker{task}}
 }
 
 // AddPattern adds a regex for matching files for this workflow
@@ -46,28 +45,26 @@ func (wf Workflow) Match(fn string) bool {
 }
 
 // AddTask adds a task to the workflow
-func (wf *Workflow) AddTask(t *Task) {
+func (wf *Workflow) AddTask(t Tasker) {
 	wf.Tasks = append(wf.Tasks, t)
 }
 
 // Run will start the execution of tasks
-func (wf *Workflow) Run(filename string, wout, werr io.Writer) {
+func (wf *Workflow) Run(info *TaskInfo) {
 	if Verbose {
-		log.Println("Running Workflow", wf.Name, filename)
+		log.Println("Running Workflow", wf.Name, info.Src)
 	}
-	fmt.Fprintln(wout, wf.Name, time.Now())
-	p := &Task{FileName: filename}
+	fmt.Fprintln(info.Tout, wf.Name, time.Now())
+	fname := info.Src
+
+	var err error
 	for _, t := range wf.Tasks {
-		t.FileName = p.FileName
-		t.Buffer = p.Buffer
-		err := t.Execute(wout, werr)
-		if err != nil {
-			fmt.Fprintln(werr, err)
-			fmt.Fprintln(werr, "Workflow did not complete for", t.FileName)
+		if err = t.Run(info); err != nil {
+			fmt.Fprintln(info.Terr, err)
+			fmt.Fprintln(info.Terr, "Workflow did not complete for", fname)
 			return
 		}
-		p = t
+		info.Src = info.Target
 	}
-	fmt.Fprintln(wout, "")
-	p.Buffer.Reset()
+	fmt.Fprintln(info.Tout, "")
 }
