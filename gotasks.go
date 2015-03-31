@@ -35,11 +35,7 @@ func (gt goPrjTask) Run(info *TaskInfo) (err error) {
 	defer func() {
 		info.Buf.WriteTo(info.Tout)
 	}()
-	if err = gocmd.Run(); err != nil {
-		return
-	}
-	fmt.Fprintln(info.Tout, "ok")
-	return
+	return gocmd.Run()
 }
 
 // NewGoTestTask returns a new task that will run all the project tests
@@ -85,7 +81,6 @@ func (lt goLintTask) Run(info *TaskInfo) (err error) {
 		err = errors.New("FAIL")
 		return
 	}
-	fmt.Fprintln(info.Tout, "ok")
 	return
 }
 

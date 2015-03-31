@@ -54,21 +54,22 @@ func (wf *Workflow) Run(info *TaskInfo) {
 	if Verbose {
 		log.Println("Running Workflow", wf.Name, info.Src)
 	}
-	fmt.Fprintln(info.Tout, wf.Name, time.Now())
+	fmt.Fprintf(info.Tout, "%v %v\n\n", time.Now().Format("2006/01/02 3:04pm"), wf.Name)
 	fname := info.Src
-
 	var err error
 	for _, t := range wf.Tasks {
+		t0 := time.Now()
 		info.Target = "" // reset the Target
 		if err = t.Run(info); err != nil {
 			fmt.Fprintln(info.Terr, err)
-			fmt.Fprintln(info.Terr, "Workflow did not complete for", fname)
+			fmt.Fprintf(info.Terr, "Fail: Workflow did not complete for %v\n\n", fname)
 			return
 		}
+		t1 := time.Now()
+		fmt.Fprintf(info.Tout, "ok %v\n\n", t1.Sub(t0))
 		if info.Target != "" {
 			// if the task set a target use it for the Src in the next task
 			info.Src = info.Target
 		}
 	}
-	fmt.Fprintln(info.Tout, "")
 }
