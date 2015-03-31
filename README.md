@@ -15,7 +15,7 @@ import "goauto"
 
 func main() {
 	// Create a Pipeline
-	p := goauto.Pipeline{Nmae: "Go Pipeline"}
+	p := goauto.Pipeline{Name: "Go Pipeline"}
 
 	// Add all my project directories recursevely ignoring hidden directories
 	if err := p.AddRecWatch("src/github.com/me/myprojects", true); err != nil {
@@ -26,7 +26,7 @@ func main() {
 	wf := goauto.Workflow{Name: "Go Build Workflow"}
 
 	// Add a pattern to watch
-	if err = wf.AddPattern(".*\\.go$"); err != nil {
+	if err := wf.AddPattern(".*\\.go$"); err != nil {
 		panic(err)
 	}
 
