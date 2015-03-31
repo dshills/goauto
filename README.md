@@ -73,7 +73,7 @@ GoAuto includes a number of pre built tasks that can be used directly.
 #### Task Generators
 The built in tasks are a great way to get started with GoAuto. They do many useful things and serve as guides for building your own tasks. GoAuto also includes generator functions that will help you build your own simple tasks. NewTask, NewShellTask and NewGoPrjTask are examples of generic task generators.
 
-NewTask is the most generic of the generators and can be used for building your own task. NewTask useage will be covered in Task Building
+NewTask is the most generic of the generators and can be used for building your own task. NewTask usage will be covered in Task Building
 
 NewShellTask will return a new Tasker that will call a shell function with arguments on the target file. 
 
@@ -100,7 +100,7 @@ type TaskInfo struct {
 }
 ```
 
-Your tasks are expected to update Target and Buf and to use Tout and Terr for output. For example a task that renames a file would set Target equal to the new file name. If your task has output useful to another task then reset the Buf and write it. User messages or error text can be written to Tout and Terr. Src will be set to the Target, if set, of the last run task in the workflow or if it's the first task will be set to the file matched by the workflow.
+Your tasks are expected to update Target and Buf and to use Tout and Terr for output. For example a task that renames a file would set Target equal to the new file name. If your task has output useful to another task then reset the Buf and write it. User messages or error text can be written to Tout and Terr. Src will be set to the Target, if set, of the last run task in the Workflow or if it's the first task will be set to the file matched by the Workflow.
 
 #### Task Building
 The real power comes from building custom tasks. This can be done using the NewTask generator or by writing a Tasker compliant interface. Here are examples of both for calling the cat shell command.
@@ -193,6 +193,10 @@ p.Watch(done)
 ```
 
 Watch directories can be added with AddWatch(watchDir string) to add a single directory or AddRecWatch(watchDir string, ignoreHidden bool) to add directories recursively optionally ignoring hidden directories.
+
+## To Do
+* Concurrent Workflows
+* More built ins for Web development SASS, LESS, Reload (Certainly can be done now but it would be nice to have built ins)
 
 ## License
 Copyright 2015 Davin Hills. All rights reserved.
