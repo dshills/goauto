@@ -27,7 +27,7 @@ func TestTransforms(t *testing.T) {
 	*/
 
 	i = "transform.go"
-	fx := extTransformer("js")
+	fx := ExtTransformer("js")
 	o = fx(i)
 	assert.Equal(t, "transform.js", o)
 }

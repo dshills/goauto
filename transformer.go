@@ -52,7 +52,8 @@ func GoRelSrcDir(f string) string {
 	return rel
 }
 
-func extTransformer(newExt string) Transformer {
+// ExtTransformer returns a Transformer for chaning file extensions
+func ExtTransformer(newExt string) Transformer {
 	return func(f string) string {
 		b := strings.TrimSuffix(f, filepath.Ext(f))
 		return b + "." + newExt
