@@ -146,7 +146,7 @@ func myCat(i *goauto.TaskInfo) (err error) {
 	cmd := exec.Command("cat", i.Target)
 	i.Buf.Reset()
 	cmd.Stdout = &i.Buf // Write the output to the buffer
-	cmd.Stderr = i.werr // use werr as stdin
+	cmd.Stderr = i.Terr // use Terr as stderr
 	defer func() {
 		i.Tout.Write(i.Buf.Bytes()) // Write the buffer to Tout
 	}()
@@ -167,7 +167,7 @@ func (t *myCatTask)Run(i *goauto.TaskInfo) (err error) {
 	cmd := exec.Command("cat", i.Target)
 	i.Buf.Reset()
 	cmd.Stdout = &i.Buf // Write the output to the buffer
-	cmd.Stderr = i.werr // use werr as stdin
+	cmd.Stderr = i.Terr // use Terr as stderr
 	defer func() {
 		i.Tout.Write(i.Buf.Bytes()) // Write the buffer to Tout
 	}()
