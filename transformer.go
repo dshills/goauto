@@ -26,6 +26,7 @@ func GoRelBase(f string) string {
 }
 
 // GoRelDir returns the path relative to $GOPATH
+//TODO handle multiple GOPATHs
 func GoRelDir(f string) string {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
@@ -39,6 +40,7 @@ func GoRelDir(f string) string {
 }
 
 // GoRelSrcDir returns the path relative to $GOPATH/src
+//TODO handle multiple GOPATHs
 func GoRelSrcDir(f string) string {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
