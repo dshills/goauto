@@ -86,6 +86,10 @@ GoAuto includes a number of pre built tasks that can be used directly.
 * NewMkdirTask task that makes a new directory
 * NewCopyTask task that copies a file
 
+##### Web
+
+* NewSassTask task that runs sass command line utility with options
+
 #### Task Generators
 The built in tasks are a great way to get started with GoAuto. They do many useful things and serve as guides for building your own tasks. GoAuto also includes generator functions that will help you build your own simple tasks. NewTask, NewShellTask and NewGoPrjTask are examples of generic task generators.
 
