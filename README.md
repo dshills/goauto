@@ -221,6 +221,9 @@ Watch directories can be added with AddWatch(watchDir string) to add a single di
 ## To Do
 * Concurrent Workflows
 * More built ins for Web development SASS, LESS, Reload (Certainly can be done now but it would be nice to have built ins)
+* Add timing functions to workflows to show task execution time
+* Add more Verbose sections for better debugging
+* Test large, concurrent, multi Pipeline, multi Worflow systems
 
 ## License
 Copyright 2015 Davin Hills. All rights reserved.
