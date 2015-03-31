@@ -68,10 +68,23 @@ Tasks are generally small, atomic pieces of work. Run tests, compile, copy a fil
 #### Task Builtins
 GoAuto includes a number of pre built tasks that can be used directly.
 
+##### Go
+
+* NewGoPrjTask will run a go command with arguments
 * NewGoTestTask will run tests for a project
 * NewGoVetTask will run vet for a project
-* NewRenameTask will rename a file
-* Many more 
+* NewGoBuildTask will run build for a project
+* NewGoInstallTask will run install for a project
+* NewGoLintTask will run golint for a project
+
+##### Shell
+
+* NewShellTask task that runs a shell command with arguments
+* NewCatTask task that cats a file
+* NewRemoveTask task that deleted a file
+* NewMoveTask task that moves a file
+* NewMkdirTask task that makes a new directory
+* NewCopyTask task that copies a file
 
 #### Task Generators
 The built in tasks are a great way to get started with GoAuto. They do many useful things and serve as guides for building your own tasks. GoAuto also includes generator functions that will help you build your own simple tasks. NewTask, NewShellTask and NewGoPrjTask are examples of generic task generators.
@@ -113,6 +126,14 @@ The real power comes from building custom tasks. This can be done using the NewT
 A Transformer is the function used to convert the incoming file name to something new. A number of Transformers are built in.
 
 	func(string)string
+
+##### Built In Transformers
+
+* Identity function that returns the string passed in 
+* GoRelBase function that returns the file path relative to GOPATH 
+* GoRelDir function that returns the directory path relative to GOPATH
+* GoRelSrcDir function that returns the directory path relative to GOPATH/src
+* ExtTransformer function that returns a Transformer function that returns file path with a new extension
 
 A runner is the function called to run your task and is in the form
 
