@@ -4,8 +4,6 @@
 ## Overview
 Full disclosure: This is ALPHA software and my first Go program. It works on my machine so mileage may vary. Suggestions, corrections, bug reports are very welcome. I have every intention of growing this into a replacement for Grunt, Gulp, Make, Rake, etc. 
 
-Building a general purpose build tool with GoAuto that used config files would be a fairly trivial project. Feel free if that is your thing.
-
 Task automation for grownups. GoAuto is a package that makes building a native executable tailored to a specific work flow, simple. 
 
 Here is a complete example of a Go build process triggered by any source file in a project changing.
@@ -28,7 +26,9 @@ func main() {
 	wf := goauto.Workflow{Name: "Go Build Workflow"}
 
 	// Add a pattern to watch
-	wf.AddPattern(".*\\.go$")
+	if err = wf.AddPattern(".*\\.go$"); err != nil {
+		panic(err)
+	}
 
 	// Add Tasks to the Workflow
 	wf.AddTask(goauto.NewGoVetTask())
@@ -52,6 +52,9 @@ func main() {
 * Fast
 * Small
 * Tool for building tools
+
+Building a general purpose build tool with GoAuto that used config files would be a fairly trivial project. Feel free if that is your thing.
+
 
 ## Instalation
 	go get github.com/dshills/goauto
