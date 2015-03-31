@@ -8,7 +8,7 @@ Task automation for grownups. GoAuto is a package that makes building a native e
 
 Here is a complete example of a Go build process triggered by any source file in a project changing.
 
-```golang
+```go
 package main
 
 import "goauto"
@@ -107,7 +107,7 @@ NewGoPrjTask will produce a new Tasker that will call the go command in the dire
 #### TaskInfo
 Before diving into task building we need to introduce the TaskInfo struct. TaskInfo is passed between tasks as they run. 
 
-```golang
+```go
 type TaskInfo struct {
 	Src        string 
 	Target     string
@@ -141,7 +141,7 @@ A runner is the function called to run your task and is in the form
 
 So lets write a task that cats a file. A cat task is already included but it is a simple example. We are using the Identity Transformer which just returns the file name passed to it. 
 
-```golang
+```go
 func myCat(i *goauto.TaskInfo) (err error) {
 	cmd := exec.Command("cat", i.Target)
 	i.Buf.Reset()
@@ -160,7 +160,7 @@ t := goauto.NewTask(goauto.Identity, myCat)
 
 Here it is written as a Tasker. In this case we don't need a Transformer because we are controlling the entire task from start to finish. In this simple example it is actually shorter to make our own Tasker
 
-```golang
+```go
 type myCatTask struct{}
 func (t *myCatTask)Run(i *goauto.TaskInfo) (err error) {
 	i.Target = i.Src // Not changing the file name so not technically required but a good habbit
@@ -182,7 +182,7 @@ Workflows sequentially run a set of tasks for files matching a regular expressio
 
 In this example we use the task that we created above and add it to a Workflow that will run on any files with the .go extension.
 
-```golang
+```go
 wf := goauto.NewWorkflow("Cat Workflow", ".*\\.go$", new(myCatTask))
 
 Or 
@@ -202,7 +202,7 @@ A Pipeline monitors one or more file system directories for changes. When it det
 
 This example uses the Workflow we created above and adds it to the Pipeline. Watches can be absolute or $GOPATH relative.
 
-```golang
+```go
 p := goauto.NewPipeline("My Pipeline", "src/github.com/dshills/my/myproject", os.Stdout, os.Stderr, wf)
 
 Or
