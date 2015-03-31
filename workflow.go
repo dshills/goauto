@@ -59,12 +59,16 @@ func (wf *Workflow) Run(info *TaskInfo) {
 
 	var err error
 	for _, t := range wf.Tasks {
+		info.Target = "" // reset the Target
 		if err = t.Run(info); err != nil {
 			fmt.Fprintln(info.Terr, err)
 			fmt.Fprintln(info.Terr, "Workflow did not complete for", fname)
 			return
 		}
-		info.Src = info.Target
+		if info.Target != "" {
+			// if the task set a target use it for the Src in the next task
+			info.Src = info.Target
+		}
 	}
 	fmt.Fprintln(info.Tout, "")
 }

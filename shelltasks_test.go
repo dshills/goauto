@@ -14,10 +14,15 @@ import (
 func TestShellTask(t *testing.T) {
 	info := TaskInfo{Src: "FROGS", Tout: os.Stdout, Terr: os.Stderr}
 
-	tsk := NewShellTask(Identity, "echo")
+	tsk := NewShellTask("echo", "-n")
 	err := tsk.Run(&info)
 	assert.Nil(t, err)
-	assert.Equal(t, "FROGS\n", info.Buf.String())
+	assert.Equal(t, "FROGS", info.Buf.String())
+
+	tsk = NewShellTaskT(Identity, "echo", "-n")
+	err = tsk.Run(&info)
+	assert.Nil(t, err)
+	assert.Equal(t, "FROGS", info.Buf.String())
 }
 
 func TestOSTasks(t *testing.T) {
