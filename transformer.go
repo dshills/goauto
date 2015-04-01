@@ -4,7 +4,6 @@
 package goauto
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 )
@@ -26,32 +25,28 @@ func GoRelBase(f string) string {
 }
 
 // GoRelDir returns the path relative to $GOPATH
-//TODO handle multiple GOPATHs
 func GoRelDir(f string) string {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		return ""
+	gopaths := GoPaths()
+	for _, gp := range gopaths {
+		rel, err := filepath.Rel(gp, filepath.Dir(f))
+		if err == nil {
+			return rel
+		}
 	}
-	rel, err := filepath.Rel(gopath, filepath.Dir(f))
-	if err != nil {
-		return ""
-	}
-	return rel
+	return ""
 }
 
 // GoRelSrcDir returns the path relative to $GOPATH/src
-//TODO handle multiple GOPATHs
 func GoRelSrcDir(f string) string {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		return ""
+	gopaths := GoPaths()
+	for _, gp := range gopaths {
+		gp = filepath.Join(gp, "src")
+		rel, err := filepath.Rel(gp, filepath.Dir(f))
+		if err == nil {
+			return rel
+		}
 	}
-	gopath = filepath.Join(gopath, "src")
-	rel, err := filepath.Rel(gopath, filepath.Dir(f))
-	if err != nil {
-		return ""
-	}
-	return rel
+	return ""
 }
 
 // ExtTransformer returns a Transformer for chaning file extensions
