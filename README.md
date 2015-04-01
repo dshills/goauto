@@ -199,6 +199,7 @@ type TaskInfo struct {
 	Target     string
 	Buf        bytes.Buffer
 	Tout, Terr io.Writer
+	Collect	   []string	
 }
 ```
 
@@ -207,6 +208,8 @@ Your tasks are expected to update Target and Buf and to use Tout and Terr for ou
 As the Workflow executes each task the TaskInfo.Src will be set to the TaskInfo.Target of the last run task. For the first task in a Workflow TaskInfo.Src is set to the filename matched by the Workflow.
 
 By using TaskInfo.Buf and TaskInfo.Target a Workflow creates a flow similar to a using a Unix pipe |
+
+TaskInfo.Collect keeps a running list of file targets over the course of one run of a Workflow. This gives tasks access to run functions on all the files process by the Workflow.
 
 #### Task Building
 The real power comes from building custom tasks. This can be done using the NewTask generator or by writing a Tasker compliant interface. Here are examples of both for calling the cat shell command.
