@@ -95,13 +95,13 @@ Workflows sequentially run a set of tasks for files matching a regular expressio
 Here we create a Workflow for the cat task
 
 ```go
-wf := goauto.NewWorkflow("Cat Workflow", ".*\\.go$", NewCatTask())
+wf := goauto.NewWorkflow("Cat Workflow", ".*\\.go$", goauto.NewCatTask())
 
 Or 
 
 wf := &goauto.Workflow{Name:"Cat Workflow"}
 wf.AddPattern(".*\\.go$")
-wf.AddTask(NewCatTask()) 
+wf.AddTask(goauto.NewCatTask()) 
 ```
 
 Workflows run tasks sequentially, passing the TaskInfo struct (See Tasks below) to each task on the way. Before a task is run the TaskInfo.Src is updated to the TaskInfo.Target of the previous task if it was set. TaskInfo.Src is set to the matching file name for the first task. 
