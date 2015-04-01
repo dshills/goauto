@@ -102,7 +102,7 @@ p.Watch(done)
 
 ### Workflows
 
-Workflows run a set of tasks for files matching a regular expression pattern.  Workflows only really need to know two things, what files to process and what tasks to perform. 
+Workflows run a set of tasks for files matching a regular expression pattern.  Workflows only really need to know two things, what files to process and what tasks to perform. Workflow implements the Workflower interface.
 
 Here we create a Workflow for myTask
 
@@ -140,6 +140,8 @@ Will run a Workflow concurrently. This should be used with caution. If multiple 
 	wf.Op = goauto.Create | goauto.Write | goauto.Remove | goauto.Rename | goauto.Chmod
 
 By default a Workflow will check file match for Create, Write, Remove, and Rename. This can be controlled by setting the wf.Op value.
+
+The Workflow struct implements the Workflower interface. Most use cases will have no need for anything more than a Workflow, however, Pipelines will accept anything that implements the Workflower interface. An example might be a new Workflower that implemented the AddPattern using glob syntax rather than a regex. Or perhaps an implementation that loaded tasks lists from a remote server. 
 
 ### Tasks
 
