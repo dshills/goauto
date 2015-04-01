@@ -77,6 +77,7 @@ func (wf *Workflow) runner(info *TaskInfo) {
 		fmt.Fprintf(info.Tout, ">> %v %v for %v\n\n", time.Now().Format("2006/01/02 3:04pm"), wf.Name, info.Src)
 	}
 	fname := info.Src
+	info.Collect = []string{fname}
 	var err error
 	for _, t := range wf.Tasks {
 		info.Target = "" // reset the Target
@@ -88,6 +89,7 @@ func (wf *Workflow) runner(info *TaskInfo) {
 		if info.Target != "" {
 			// if the task set a target use it for the Src in the next task
 			info.Src = info.Target
+			info.Collect = append(info.Collect, info.Target)
 		}
 	}
 }

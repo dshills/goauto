@@ -10,10 +10,11 @@ import (
 
 // A TaskInfo contains the results of running a Task
 type TaskInfo struct {
-	Src        string
-	Target     string
-	Buf        bytes.Buffer
-	Tout, Terr io.Writer
+	Src        string       // Incoming file name for a task to process
+	Target     string       // Output file name after running a task
+	Buf        bytes.Buffer // Output of running a task
+	Tout, Terr io.Writer    // Writers to write output and errors
+	Collect    []string     // List of file names processed by a Workflow
 }
 
 // A Runner represents the function needed to satisfy a Tasker interface
