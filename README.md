@@ -92,16 +92,16 @@ p.Watch(done)
 ### Workflows
 Workflows sequentially run a set of tasks for files matching a regular expression pattern.  Workflows only really need to know two things, what files to process and what tasks to perform. 
 
-Here we create a Workflow for the cat task
+Here we create a Workflow for myTask
 
 ```go
-wf := goauto.NewWorkflow("Cat Workflow", ".*\\.go$", goauto.NewCatTask())
+wf := goauto.NewWorkflow("My Workflow", ".*\\.go$", &myTask)
 
 Or 
 
-wf := &goauto.Workflow{Name:"Cat Workflow"}
+wf := &goauto.Workflow{Name:"My Workflow"}
 wf.AddPattern(".*\\.go$")
-wf.AddTask(goauto.NewCatTask()) 
+wf.AddTask(&myTask) 
 ```
 
 Workflows run tasks sequentially, passing the TaskInfo struct (See Tasks below) to each task on the way. Before a task is run the TaskInfo.Src is updated to the TaskInfo.Target of the previous task if it was set. TaskInfo.Src is set to the matching file name for the first task. 
