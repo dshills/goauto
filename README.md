@@ -1,4 +1,4 @@
-# GoAuto
+# GoAuto [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](https://godoc.org/github.com/dshills/goauto)
 >"What makes you so ashamed of being a grownup?" - The War Doctor
 
 ## Overview
@@ -268,6 +268,12 @@ func (t *myCatTask)Run(i *goauto.TaskInfo) (err error) {
 ## To Do
 * More built ins for Web development LESS, Reload (Certainly can be done now but it would be nice to have built ins)
 * Test large, concurrent, multi Pipeline, multi Worflow systems
+
+## Alternatives
+
+[Slurp](https://github.com/omeid/slurp) Go
+[Gulp](http://gulpjs.com/) Node.js
+[Grunt](http://gruntjs.com/) Node.js
 
 ## License
 Copyright 2015 Davin Hills. All rights reserved.
