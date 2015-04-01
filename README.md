@@ -2,8 +2,6 @@
 >"What makes you so ashamed of being a grownup?" - The War Doctor
 
 ## Overview
-Full disclosure: This is ALPHA software and my first Go program. It works on my machine so mileage may vary. Suggestions, corrections, bug reports are very welcome. I have every intention of growing this into a replacement for Grunt, Gulp, Make, Rake, etc. 
-
 Task automation for grownups. GoAuto is a package that makes building a native executable tailored to a specific work flow, simple. 
 
 Here is a complete example of a Go build process triggered by any source file in a project changing.
@@ -60,6 +58,55 @@ Building a general purpose build tool with GoAuto that used config files would b
 	go get github.com/dshills/goauto
 	
 ## Concepts
+
+### Pipelines
+A Pipeline monitors one or more file system directories for changes. When it detects a change it asks each Workflow if the specific file is a match and if it is launches the Workflow. Workflows are run sequentially, however future versions may include an option for running concurrently. Output and Error io can be set for a Pipeline. If not specified it will use StdIn and StdErr. One or more Pipelines can be declared. Running them concurrently is a choice left to the developer.
+
+Watches can be absolute or $GOPATH relative.
+
+```go
+p := goauto.NewPipeline("My Pipeline", "src/github.com/dshills/my/myproject", os.Stdout, os.Stderr, wf)
+
+Or
+
+p := goauto.Pipeline{}
+p.AddWatch("src/github.com/me/myproject")
+p.AddWorkflow(wf)
+```
+
+Watch directories can be added with AddWatch to add a single directory. The absolute path of the added path will be returned.
+
+	func (p *Pipeline) AddWatch(watchDir string) (string, error)
+	
+To add directories recursively use AddRecWatch optionally ignoring hidden directories
+
+	func (p *Pipeline) AddRecWatch(watchDir string, ignoreHidden bool) error 
+
+After adding Workflows and Tasks to your pipeline simply tell the Pipeline to begin watching. The Pipeline will block on the channel passed in to allow a signal to stop watching.
+
+```go
+done := make(chan bool)
+p.Watch(done)
+```
+
+### Workflows
+Workflows sequentially run a set of tasks for files matching a regular expression pattern.  Workflows only really need to know two things, what files to process and what tasks to perform. 
+
+Here we create a Workflow for the cat task
+
+```go
+wf := goauto.NewWorkflow("Cat Workflow", ".*\\.go$", NewCatTask())
+
+Or 
+
+wf := &goauto.Workflow{Name:"Cat Workflow"}
+wf.AddPattern(".*\\.go$")
+wf.AddTask(NewCatTask()) 
+```
+
+Workflows run tasks sequentially, passing the TaskInfo struct (See Tasks below) to each task on the way. Before a task is run the TaskInfo.Src is updated to the TaskInfo.Target of the previous task if it was set. TaskInfo.Src is set to the matching file name for the first task. 
+
+Any task that returns an error will stop the Workflow. If you want the Workflow to continue even if an error occurs make sure to handle the error and not return it.
 
 ### Tasks
 
@@ -120,7 +167,11 @@ type TaskInfo struct {
 }
 ```
 
-Your tasks are expected to update Target and Buf and to use Tout and Terr for output. For example a task that renames a file would set Target equal to the new file name. If your task has output useful to another task then reset the Buf and write it. User messages or error text can be written to Tout and Terr. Src will be set to the Target, if set, of the last run task in the Workflow or if it's the first task will be set to the file matched by the Workflow.
+Your tasks are expected to update Target and Buf and to use Tout and Terr for output. For example a task that renames a file would set Target equal to the new file name. If your task has output useful to another task then reset the Buf and write it. User messages or error text can be written to Tout and Terr. 
+
+As the Workflow executes each task the TaskInfo.Src will be set to the TaskInfo.Target of the last run task. For the first task in a Workflow TaskInfo.Src is set to the filename matched by the Workflow.
+
+By using TaskInfo.Buf and TaskInfo.Target a Workflow creates a flow similar to a using a Unix pipe |
 
 #### Task Building
 The real power comes from building custom tasks. This can be done using the NewTask generator or by writing a Tasker compliant interface. Here are examples of both for calling the cat shell command.
@@ -179,53 +230,9 @@ func (t *myCatTask)Run(i *goauto.TaskInfo) (err error) {
 }
 ```
 
-Now we can add our task to one or more Workflows.
-
-### Workflows
-Workflows sequentially run a set of tasks for files matching a regular expression pattern.  Workflows only really need to know two things, what files to process and what tasks to perform. 
-
-In this example we use the task that we created above and add it to a Workflow that will run on any files with the .go extension.
-
-```go
-wf := goauto.NewWorkflow("Cat Workflow", ".*\\.go$", new(myCatTask))
-
-Or 
-
-wf := &goauto.Workflow{Name:"Cat Workflow"}
-wf.AddPattern(".*\\.go$")
-wf.AddTask(new(myCatTask)) 
-```
-
-Workflows run tasks sequentially, passing the TaskInfo to each task on the way. Before a task is run the TaskInfo.Src is updated to the TaskInfo.Target of the previous task if it was set. TaskInfo.Src is set to the matching file name for the first task. 
-Any task that returns an error will stop the Workflow. If you want the Workflow to continue even if an error occurs make sure to handle the error and not return it.
-
-Now we can add our Workflow to a Pipeline.
-
-### Pipelines
-A Pipeline monitors one or more file system directories for changes. When it detects a change it asks each Workflow if the specific file is a match and if it is launches the Workflow. Workflows are run sequentially, however future versions may include an option for running concurrently. Output and Error io can be set for a Pipeline. If not specified it will use StdIn and StdErr. One or more Pipelines can be declared. Running them concurrently is a choice left to the developer.
-
-This example uses the Workflow we created above and adds it to the Pipeline. Watches can be absolute or $GOPATH relative.
-
-```go
-p := goauto.NewPipeline("My Pipeline", "src/github.com/dshills/my/myproject", os.Stdout, os.Stderr, wf)
-
-Or
-
-p := goauto.Pipeline{}
-p.AddWatch("src/github.com/me/myproject")
-p.AddWorkflow(wf)
-
-done := make(chan bool)
-p.Watch(done)
-
-```
-
-Watch directories can be added with AddWatch(watchDir string) to add a single directory or AddRecWatch(watchDir string, ignoreHidden bool) to add directories recursively optionally ignoring hidden directories.
-
 ## To Do
 * Concurrent Workflows
-* More built ins for Web development SASS, LESS, Reload (Certainly can be done now but it would be nice to have built ins)
-* Add timing functions to workflows to show task execution time
+* More built ins for Web development LESS, Reload (Certainly can be done now but it would be nice to have built ins)
 * Add more Verbose sections for better debugging
 * Test large, concurrent, multi Pipeline, multi Worflow systems
 
