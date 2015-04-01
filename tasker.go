@@ -41,7 +41,7 @@ func NewTask(t Transformer, r Runner) Tasker {
 	return &task{t, r}
 }
 
-func (t task) Run(i *TaskInfo) (err error) {
+func (t *task) Run(i *TaskInfo) (err error) {
 	i.Target = t.Transform(i.Src)
 	return t.RunFunc(i)
 }

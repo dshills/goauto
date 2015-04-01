@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 type sassTask struct {
@@ -30,9 +31,9 @@ func NewSassTask(cssDir, cacheDir, style string) Tasker {
 }
 
 func (st sassTask) Run(info *TaskInfo) (err error) {
+	t0 := time.Now()
 	dir := filepath.Dir(info.Src)
 	info.Buf.Reset()
-	fmt.Fprintln(info.Tout, "Sass ...", dir)
 	if st.cssDir != "" {
 		dir += ":" + st.cssDir
 	}
@@ -44,6 +45,10 @@ func (st sassTask) Run(info *TaskInfo) (err error) {
 
 	defer func() {
 		info.Tout.Write(info.Buf.Bytes())
+		if err != nil && Verbose {
+			t1 := time.Now()
+			fmt.Fprintf(info.Tout, "<< sass %v %v\n", dir, t1.Sub(t0))
+		}
 	}()
 	return cmd.Run()
 }

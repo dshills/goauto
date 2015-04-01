@@ -18,13 +18,13 @@ type Pipeline struct {
 	Name       string
 	Watches    []string
 	Wout, Werr io.Writer
-	Workflows  []*Workflow
+	Workflows  []Workflower
 	watcher    *fsnotify.Watcher
 }
 
 // NewPipeline returns a basic Pipeline with a dir to watch, output and error writers and a workflow
-func NewPipeline(name string, watchDir string, wout, werr io.Writer, wf *Workflow) *Pipeline {
-	p := Pipeline{Name: name, Wout: wout, Werr: werr, Workflows: []*Workflow{wf}}
+func NewPipeline(name string, watchDir string, wout, werr io.Writer, wf Workflower) *Pipeline {
+	p := Pipeline{Name: name, Wout: wout, Werr: werr, Workflows: []Workflower{wf}}
 	_, err := p.AddWatch(watchDir)
 	if err != nil {
 		panic(err)
@@ -79,6 +79,9 @@ func (p *Pipeline) AddRecWatch(watchDir string, ignoreHidden bool) error {
 
 // AddWorkflow adds a workflow to the pipeline
 func (p *Pipeline) AddWorkflow(w *Workflow) {
+	if w.Op == 0 {
+		w.Op = Create | Write | Remove | Rename
+	}
 	p.Workflows = append(p.Workflows, w)
 }
 
@@ -115,15 +118,7 @@ func (p *Pipeline) Watch(done <-chan bool) {
 		for {
 			select {
 			case event := <-watcher.Events:
-				if event.Op&fsnotify.Write == fsnotify.Write {
-					p.doWorkflow(event.Name)
-				}
-				if event.Op&fsnotify.Create == fsnotify.Create {
-					p.doWorkflow(event.Name)
-				}
-				if event.Op&fsnotify.Rename == fsnotify.Rename {
-					p.doWorkflow(event.Name)
-				}
+				p.queryWorkflow(event.Name, uint32(event.Op))
 			case err := <-watcher.Errors:
 				fmt.Fprintln(p.Werr, "Error:", err)
 			}
@@ -133,21 +128,20 @@ func (p *Pipeline) Watch(done <-chan bool) {
 	for _, w := range p.Watches {
 		watcher.Add(w)
 		if Verbose {
-			log.Println("Watching", w)
+			fmt.Fprintf(p.Wout, "Watching %v\n", w)
 		}
 	}
 
 	<-done
 }
 
-// doWorkflow checks for file match for each workflow and if matches executes the workflow tasks
-func (p *Pipeline) doWorkflow(fpath string) {
+// queryWorkflow checks for file match for each workflow and if matches executes the workflow tasks
+func (p *Pipeline) queryWorkflow(fpath string, op uint32) {
 	if Verbose {
-		log.Println("Watcher event", fpath)
+		fmt.Fprintf(p.Wout, "Watcher event %v %v\n", fpath, op)
 	}
-	f := filepath.Base(fpath)
 	for _, wf := range p.Workflows {
-		if wf.Match(f) {
+		if wf.Match(fpath, op) {
 			wf.Run(&TaskInfo{Src: fpath, Tout: p.Wout, Terr: p.Werr})
 		}
 	}

@@ -12,6 +12,9 @@ package main
 import "goauto"
 
 func main() {
+	// Turn on Verbose while developing
+	goauto.Verbose = true
+
 	// Create a Pipeline
 	p := goauto.Pipeline{Name: "Go Pipeline"}
 
@@ -59,6 +62,14 @@ Building a general purpose build tool with GoAuto that used config files would b
 	
 ## Concepts
 
+### Verbose
+GoAuto follows the go tools convention of no news is good news. It will silently watch for file changes, launch workflows and tasks without any output other than the output from the task itself. If running a task like a go tool that has the same philosophy, no output will be generated at all. When first writing a set of tasks this can be a little disconcerting. Did it run? Did it work?
+
+	goauto.Verbose = true
+
+This will print debug information about what events are being received by a Pipeline, starting a workflow, and tasks being run. At some point an option may be added to just show specific output. When writing your own tasks you always have the choice of outputting whatever you wish.
+
+
 ### Pipelines
 A Pipeline monitors one or more file system directories for changes. When it detects a change it asks each Workflow if the specific file is a match and if it is launches the Workflow. Workflows are run sequentially, however future versions may include an option for running concurrently. Output and Error io can be set for a Pipeline. If not specified it will use StdIn and StdErr. One or more Pipelines can be declared. Running them concurrently is a choice left to the developer.
 
@@ -90,7 +101,8 @@ p.Watch(done)
 ```
 
 ### Workflows
-Workflows sequentially run a set of tasks for files matching a regular expression pattern.  Workflows only really need to know two things, what files to process and what tasks to perform. 
+
+Workflows run a set of tasks for files matching a regular expression pattern.  Workflows only really need to know two things, what files to process and what tasks to perform. 
 
 Here we create a Workflow for myTask
 
@@ -107,6 +119,27 @@ wf.AddTask(&myTask)
 Workflows run tasks sequentially, passing the TaskInfo struct (See Tasks below) to each task on the way. Before a task is run the TaskInfo.Src is updated to the TaskInfo.Target of the previous task if it was set. TaskInfo.Src is set to the matching file name for the first task. 
 
 Any task that returns an error will stop the Workflow. If you want the Workflow to continue even if an error occurs make sure to handle the error and not return it.
+
+#### Advanced Options
+
+```go
+// A Workflow represents a set of tasks for files matching one or more regex patterns
+type Workflow struct {
+	Name       string
+	Concurrent bool
+	Op         Op
+	Regexs     []*regexp.Regexp
+	Tasks      []Tasker
+}
+```
+
+	wf.Concurrent = true
+
+Will run a Workflow concurrently. This should be used with caution. If multiple Workflows work with the same set of files there is a potential for confusion and even data loss.
+
+	wf.Op = goauto.Create | goauto.Write | goauto.Remove | goauto.Rename | goauto.Chmod
+
+By default a Workflow will check file match for Create, Write, Remove, and Rename. This can be controlled by setting the wf.Op value.
 
 ### Tasks
 
@@ -231,9 +264,7 @@ func (t *myCatTask)Run(i *goauto.TaskInfo) (err error) {
 ```
 
 ## To Do
-* Concurrent Workflows
 * More built ins for Web development LESS, Reload (Certainly can be done now but it would be nice to have built ins)
-* Add more Verbose sections for better debugging
 * Test large, concurrent, multi Pipeline, multi Worflow systems
 
 ## License
