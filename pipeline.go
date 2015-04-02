@@ -12,6 +12,12 @@ import (
 	"gopkg.in/fsnotify.v1"
 )
 
+// Flags to WatchRecursive to include or ignore hidden directories
+const (
+	IgnoreHidden  = true
+	IncludeHidden = false
+)
+
 // A Pipeline watches one or more directories for changes
 type Pipeline struct {
 	Name       string
@@ -25,16 +31,16 @@ type Pipeline struct {
 // NewPipeline returns a basic Pipeline with a dir to watch, output and error writers and a workflow
 func NewPipeline(name string, watchDir string, wout, werr io.Writer, wf Workflower) *Pipeline {
 	p := Pipeline{Name: name, Wout: wout, Werr: werr, Workflows: []Workflower{wf}}
-	_, err := p.AddWatch(watchDir)
+	_, err := p.Watch(watchDir)
 	if err != nil {
 		panic(err)
 	}
 	return &p
 }
 
-// AddWatch adds a GOPATH relative or absolute path to watch
+// Watch adds a GOPATH relative or absolute path to watch
 // rejects invalid paths and ignores duplicates
-func (p *Pipeline) AddWatch(watchDir string) (string, error) {
+func (p *Pipeline) Watch(watchDir string) (string, error) {
 	d, err := AbsPath(watchDir)
 	if err != nil {
 		if p.Verbose {
@@ -55,8 +61,8 @@ func (p *Pipeline) AddWatch(watchDir string) (string, error) {
 	return d, nil
 }
 
-// AddRecWatch adds a GOPATH relative or absolute path to watch recursivly
-func (p *Pipeline) AddRecWatch(watchDir string, ignoreHidden bool) error {
+// WatchRecursive adds a GOPATH relative or absolute path to watch recursivly
+func (p *Pipeline) WatchRecursive(watchDir string, ignoreHidden bool) error {
 	d, err := AbsPath(watchDir)
 	if err != nil {
 		return err
@@ -70,24 +76,23 @@ func (p *Pipeline) AddRecWatch(watchDir string, ignoreHidden bool) error {
 			if (info.Name()[:1] == ".") && ignoreHidden {
 				return filepath.SkipDir
 			}
-			p.AddWatch(path)
+			p.Watch(path)
 		}
 		return nil
 	})
 	return nil
 }
 
-// AddWorkflow adds a workflow to the pipeline
-func (p *Pipeline) AddWorkflow(w *Workflow) {
-	if w.Op == 0 {
-		w.Op = Create | Write | Remove | Rename
+// AddWorkflow adds one or more Workfloers to the pipeline
+func (p *Pipeline) AddWorkflow(ws ...Workflower) {
+	for _, w := range ws {
+		p.Workflows = append(p.Workflows, w)
 	}
-	p.Workflows = append(p.Workflows, w)
 }
 
-// Watch begins watching for changes to files in the Watches directories
+// Start begins watching for changes to files in the Watches directories
 // Detected file changes will be compared with workflow regexp and if match will run the workflow tasks
-func (p *Pipeline) Watch(done <-chan bool) {
+func (p *Pipeline) Start(done <-chan bool) {
 	if p.Wout == nil {
 		p.Wout = os.Stdout
 	}

@@ -9,20 +9,6 @@ import (
 	"time"
 )
 
-// Op describes a set of file operations.
-// Mimics fsnotify
-type Op uint32
-
-// These are the generalized file operations that can trigger a notification.
-// Mimics fsnotify
-const (
-	Create Op = 1 << iota
-	Write
-	Remove
-	Rename
-	Chmod
-)
-
 // A Workflow represents a set of tasks for files matching one or more regex patterns
 type Workflow struct {
 	Name       string
@@ -33,16 +19,20 @@ type Workflow struct {
 }
 
 // NewWorkflow returns a Workflow with tasks
-// An invlid regexp pattern will cause a panic
-func NewWorkflow(tasks ...Tasker) Workflower {
+func NewWorkflow(tasks ...Tasker) *Workflow {
 	wf := new(Workflow)
+	wf.WatchOp(Create | Write | Remove | Rename)
 	wf.Add(tasks...)
 	return wf
 }
 
 // WatchPattern adds one or more regex for matching files for this workflow
 // An invalid regexp pattern will return an error
+// Sets file operations to Create|Write|Remove|Rename if not set
 func (wf *Workflow) WatchPattern(patterns ...string) error {
+	if wf.Op == 0 {
+		wf.WatchOp(Create | Write | Remove | Rename)
+	}
 	for _, p := range patterns {
 		r, err := regexp.Compile(p)
 		if err != nil {
@@ -51,6 +41,12 @@ func (wf *Workflow) WatchPattern(patterns ...string) error {
 		wf.Regexs = append(wf.Regexs, r)
 	}
 	return nil
+}
+
+// WatchOp sets the file operations to match
+// The default is Create | Write | Remove | Rename
+func (wf *Workflow) WatchOp(op Op) {
+	wf.Op = op
 }
 
 // Match checks a file name against the regexp of the Workflow and the file operation
