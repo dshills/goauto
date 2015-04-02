@@ -96,6 +96,7 @@ func (p *Pipeline) Add(ws ...Workflower) {
 }
 
 // batchRun watches for file events and batches them up based on a timer
+// **Thanks to github.com/egonelbre for the suggestions and examples for batch events
 func (p *Pipeline) batchRun() {
 	tick := time.Tick(300 * time.Millisecond)
 	var evs []fsnotify.Event

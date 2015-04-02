@@ -2,6 +2,8 @@
 >"What makes you so ashamed of being a grownup?" - The War Doctor
 
 ## Overview
+**NOTE** There have been a number of changes to the internals and the API since first release. The API should now be approaching stable.
+
 Task automation for grownups. GoAuto is a package that makes building a native executable tailored to a specific work flow, simple. 
 
 Here is a complete example of a Go build process triggered by any source file in a project changing.
@@ -9,39 +11,35 @@ Here is a complete example of a Go build process triggered by any source file in
 ```go
 package main
 
-import "goauto"
+import (
+	"path/filepath"
+
+	"github.com/dshills/goauto"
+)
 
 func main() {
-	// Turn on Verbose while developing
-	goauto.Verbose = true
+	// Create a pipeline
+	p := goauto.NewPipeline("Go Pipeline", goauto.Verbose)
 
-	// Create a Pipeline
-	p := goauto.Pipeline{Name: "Go Pipeline"}
-
-	// Add all my project directories recursevely ignoring hidden directories
-	if err := p.AddRecWatch("src/github.com/me/myprojects", true); err != nil {
+	// watch directories recursivly, ignoring hidden directories
+	wd := filepath.Join("src", "github.com", "myprojects")
+	if err := p.WatchRecursive(wd, goauto.IgnoreHidden); err != nil {
 		panic(err)
 	}
 
-	// Create a Workflow
-	wf := goauto.Workflow{Name: "Go Build Workflow"}
+	// Create a workflow with some tasks
+	wf := goauto.NewWorkflow(goauto.NewGoVetTask(), goauto.NewGoTestTask(), goauto.NewGoLintTask(), goauto.NewGoInstallTask())
 
-	// Add a pattern to watch
-	if err := wf.AddPattern(".*\\.go$"); err != nil {
+	// Add a file pattern to match
+	if err := wf.WatchPattern(".*\\.go$"); err != nil {
 		panic(err)
 	}
 
-	// Add Tasks to the Workflow
-	wf.AddTask(goauto.NewGoVetTask())
-	wf.AddTask(goauto.NewGoTestTask())
-	wf.AddTask(goauto.NewGoLintTask())
-	wf.AddTask(goauto.NewGoInstallTask())
+	// Add the workflow to the pipeline
+	p.Add(wf)
 
-	p.AddWorkflow(&wf)
-
-	// Start watching
-	done := make(chan bool)
-	p.Watch(done)
+	// start the pipeline
+	p.Start()
 }
 ```
 
@@ -62,59 +60,73 @@ Building a general purpose build tool with GoAuto that used config files would b
 	
 ## Concepts
 
-### Verbose
+### Pipelines
+A Pipeline monitors one or more file system directories for changes. When it detects a change it asks each Workflow if the specific file is a match and if it is launches the Workflow. Output and Error io can be set for a Pipeline. If not specified it will use StdIn and StdErr. One or more Pipelines can be declared. Running them concurrently is a choice left to the developer.
+
 GoAuto follows the go tools convention of no news is good news. It will silently watch for file changes, launch workflows and tasks without any output other than the output from the task itself. If running a task like a go tool that has the same philosophy, no output will be generated at all. When first writing a set of tasks this can be a little disconcerting. Did it run? Did it work?
 
-	goauto.Verbose = true
+```go
+goauto.Verbose
+goauto.Silent
+```
 
-This will print debug information about what events are being received by a Pipeline, starting a workflow, and tasks being run. At some point an option may be added to just show specific output. When writing your own tasks you always have the choice of outputting whatever you wish.
-
-
-### Pipelines
-A Pipeline monitors one or more file system directories for changes. When it detects a change it asks each Workflow if the specific file is a match and if it is launches the Workflow. Workflows are run sequentially, however future versions may include an option for running concurrently. Output and Error io can be set for a Pipeline. If not specified it will use StdIn and StdErr. One or more Pipelines can be declared. Running them concurrently is a choice left to the developer.
+Verbose will print debug information about what events are being received by a Pipeline, starting a workflow, and tasks being run. At some point an option may be added to just show specific output. When writing your own tasks you always have the choice of outputting whatever you wish.
 
 Watches can be absolute or $GOPATH relative.
 
 ```go
-p := goauto.NewPipeline("My Pipeline", "src/github.com/dshills/my/myproject", os.Stdout, os.Stderr, wf)
+// Create a pipeline
+p := goauto.NewPipeline("Go Pipeline", goauto.Verbose)
+
+// watch directories recursivly, ignoring hidden directories
+wd := filepath.Join("src", "github.com", "myprojects")
+if err := p.WatchRecursive(wd, goauto.IgnoreHidden); err != nil {
+	panic(err)
+}
+```
+
+Watch directories can be added with Watch to add a single directory. The absolute path of the added path will be returned.
+
+	func (p *Pipeline) Watch(watchDir string) (string, error)
+	
+To add directories recursively use WatchRecursive optionally ignoring hidden directories
+
+	func (p *Pipeline) WatchRecursive(watchDir string, ignoreHidden bool) error 
+
+Adding Workflows are added using Add
+
+	func (p *Pipeline) Add(ws ...Workflower)
+
+After adding Workflows and Tasks to your pipeline simply tell the Pipeline to Start watching. The Pipeline will block. To stop a running Pipeline call Stop.
+
+```go
+p.Start()
 
 Or
 
-p := goauto.Pipeline{}
-p.AddWatch("src/github.com/me/myproject")
-p.AddWorkflow(wf)
-```
+go p.Start()
 
-Watch directories can be added with AddWatch to add a single directory. The absolute path of the added path will be returned.
+	do stuff
 
-	func (p *Pipeline) AddWatch(watchDir string) (string, error)
-	
-To add directories recursively use AddRecWatch optionally ignoring hidden directories
-
-	func (p *Pipeline) AddRecWatch(watchDir string, ignoreHidden bool) error 
-
-After adding Workflows and Tasks to your pipeline simply tell the Pipeline to begin watching. The Pipeline will block on the channel passed in to allow a signal to stop watching.
-
-```go
-done := make(chan bool)
-p.Watch(done)
+p.Stop()
 ```
 
 ### Workflows
 
 Workflows run a set of tasks for files matching a regular expression pattern.  Workflows only really need to know two things, what files to process and what tasks to perform. Workflow implements the Workflower interface.
 
-Here we create a Workflow for myTask
+Here we create a Workflow with a number of built in tasks. We then add a pattern to match using WatchPattern.
 
 ```go
-wf := goauto.NewWorkflow("My Workflow", ".*\\.go$", &myTask)
+// Create a workflow with some tasks
+wf := goauto.NewWorkflow(goauto.NewGoVetTask(), goauto.NewGoTestTask(), goauto.NewGoLintTask(), goauto.NewGoInstallTask())
 
-Or 
-
-wf := &goauto.Workflow{Name:"My Workflow"}
-wf.AddPattern(".*\\.go$")
-wf.AddTask(&myTask) 
+// Add a regex pattern to match
+err := wf.WatchPattern(".*\\.go$")
 ```
+Tasks can also be added using Add
+
+	func (wf *Workflow) Add(tasks ...Tasker)
 
 Workflows run tasks sequentially, passing the TaskInfo struct (See Tasks below) to each task on the way. Before a task is run the TaskInfo.Src is updated to the TaskInfo.Target of the previous task if it was set. TaskInfo.Src is set to the matching file name for the first task. 
 
@@ -133,15 +145,13 @@ type Workflow struct {
 }
 ```
 
-	wf.Concurrent = true
+Setting Concurrent to true will run a Workflow concurrently. This should be used with caution. If multiple Workflows work with the same set of files there is a potential for confusion and even data loss.
 
-Will run a Workflow concurrently. This should be used with caution. If multiple Workflows work with the same set of files there is a potential for confusion and even data loss.
+	Op = goauto.Create | goauto.Write | goauto.Remove | goauto.Rename | goauto.Chmod
 
-	wf.Op = goauto.Create | goauto.Write | goauto.Remove | goauto.Rename | goauto.Chmod
+By default a Workflow will check file match for Create, Write, Remove, and Rename. This can be controlled by setting the Op value.
 
-By default a Workflow will check file match for Create, Write, Remove, and Rename. This can be controlled by setting the wf.Op value.
-
-The Workflow struct implements the Workflower interface. Most use cases will have no need for anything more than a Workflow, however, Pipelines will accept anything that implements the Workflower interface. An example might be a new Workflower that implemented the AddPattern using glob syntax rather than a regex. Or perhaps an implementation that loaded tasks lists from a remote server. 
+The Workflow struct implements the Workflower interface. Most use cases will have no need for anything more than a Workflow, however, Pipelines will accept anything that implements the Workflower interface. An example might be a new Workflower that implemented the WatchPattern using glob syntax rather than a regex. 
 
 ### Tasks
 
@@ -194,22 +204,24 @@ NewGoPrjTask will produce a new Tasker that will call the go command in the dire
 Before diving into task building we need to introduce the TaskInfo struct. TaskInfo is passed between tasks as they run. 
 
 ```go
+// A TaskInfo contains the results of running a Task
 type TaskInfo struct {
-	Src        string 
-	Target     string
-	Buf        bytes.Buffer
-	Tout, Terr io.Writer
-	Collect	   []string	
+	Src        string       // Incoming file name for a task to process
+	Target     string       // Output file name after running a task
+	Buf        bytes.Buffer // Output of running a task
+	Tout, Terr io.Writer    // Writers to write output and errors
+	Collect    []string     // List of file names processed by a Workflow
+	Verbose    bool         // output debug info
 }
 ```
 
 Your tasks are expected to update Target and Buf and to use Tout and Terr for output. For example a task that renames a file would set Target equal to the new file name. If your task has output useful to another task then reset the Buf and write it. User messages or error text can be written to Tout and Terr. 
 
-As the Workflow executes each task the TaskInfo.Src will be set to the TaskInfo.Target of the last run task. For the first task in a Workflow TaskInfo.Src is set to the filename matched by the Workflow.
+As the Workflow executes each task the Src will be set to the Target of the last run task. For the first task in a Workflow Src is set to the filename matched by the Workflow.
 
-By using TaskInfo.Buf and TaskInfo.Target a Workflow creates a flow similar to a using a Unix pipe |
+By using Buf and Target a Workflow creates a flow similar to a using a Unix pipe 
 
-TaskInfo.Collect keeps a running list of file targets over the course of one run of a Workflow. This gives tasks access to run functions on all the files processed by the Workflow.
+Collect keeps a running list of file targets over the course of one run of a Workflow. This gives tasks access to run functions on all the files processed by the Workflow.
 
 #### Task Building
 The real power comes from building custom tasks. This can be done using the NewTask generator or by writing a Tasker compliant interface. Here are examples of both for calling the cat shell command.
