@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	"gopkg.in/fsnotify.v1"
 )
@@ -18,6 +19,12 @@ const (
 	IncludeHidden = false
 )
 
+// Flags for verbose output
+const (
+	Verbose = true
+	Silent  = false
+)
+
 // A Pipeline watches one or more directories for changes
 type Pipeline struct {
 	Name       string
@@ -26,15 +33,13 @@ type Pipeline struct {
 	Workflows  []Workflower
 	Verbose    bool
 	watcher    *fsnotify.Watcher
+	events     chan []fsnotify.Event
+	done       chan bool
 }
 
 // NewPipeline returns a basic Pipeline with a dir to watch, output and error writers and a workflow
-func NewPipeline(name string, watchDir string, wout, werr io.Writer, wf Workflower) *Pipeline {
-	p := Pipeline{Name: name, Wout: wout, Werr: werr, Workflows: []Workflower{wf}}
-	_, err := p.Watch(watchDir)
-	if err != nil {
-		panic(err)
-	}
+func NewPipeline(name string, verbose bool) *Pipeline {
+	p := Pipeline{Name: name, Wout: os.Stdout, Werr: os.Stderr, Verbose: verbose}
 	return &p
 }
 
@@ -83,16 +88,39 @@ func (p *Pipeline) WatchRecursive(watchDir string, ignoreHidden bool) error {
 	return nil
 }
 
-// AddWorkflow adds one or more Workfloers to the pipeline
-func (p *Pipeline) AddWorkflow(ws ...Workflower) {
+// Add adds one or more Workflows to the pipeline
+func (p *Pipeline) Add(ws ...Workflower) {
 	for _, w := range ws {
 		p.Workflows = append(p.Workflows, w)
 	}
 }
 
+// batchRun watches for file events and batches them up based on a timer
+func (p *Pipeline) batchRun() {
+	tick := time.Tick(300 * time.Millisecond)
+	var evs []fsnotify.Event
+
+outer:
+	for {
+		select {
+		case event := <-p.watcher.Events:
+			evs = append(evs, event)
+		case <-tick:
+			if len(evs) == 0 {
+				continue
+			}
+			p.events <- evs
+			evs = []fsnotify.Event{}
+		case <-p.done:
+			break outer
+		}
+	}
+	close(p.done)
+}
+
 // Start begins watching for changes to files in the Watches directories
 // Detected file changes will be compared with workflow regexp and if match will run the workflow tasks
-func (p *Pipeline) Start(done <-chan bool) {
+func (p *Pipeline) Start() {
 	if p.Wout == nil {
 		p.Wout = os.Stdout
 	}
@@ -116,19 +144,11 @@ func (p *Pipeline) Start(done <-chan bool) {
 		fmt.Fprintln(p.Werr, err)
 		return
 	}
-	defer watcher.Close()
 	p.watcher = watcher
+	p.done = make(chan bool)
+	p.events = make(chan []fsnotify.Event)
 
-	go func() {
-		for {
-			select {
-			case event := <-watcher.Events:
-				p.queryWorkflow(event.Name, uint32(event.Op))
-			case err := <-watcher.Errors:
-				fmt.Fprintln(p.Werr, "Error:", err)
-			}
-		}
-	}()
+	go p.batchRun()
 
 	for _, w := range p.Watches {
 		watcher.Add(w)
@@ -137,7 +157,14 @@ func (p *Pipeline) Start(done <-chan bool) {
 		}
 	}
 
-	<-done
+	for {
+		select {
+		case evs := <-p.events:
+			for _, e := range evs {
+				p.queryWorkflow(e.Name, uint32(e.Op))
+			}
+		}
+	}
 }
 
 // queryWorkflow checks for file match for each workflow and if matches executes the workflow tasks
@@ -150,4 +177,10 @@ func (p *Pipeline) queryWorkflow(fpath string, op uint32) {
 			wf.Run(&TaskInfo{Src: fpath, Tout: p.Wout, Terr: p.Werr, Verbose: p.Verbose})
 		}
 	}
+}
+
+// Stop will discontinue watching for file changes
+func (p *Pipeline) Stop() {
+	p.done <- true
+	p.watcher.Close()
 }

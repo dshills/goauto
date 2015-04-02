@@ -1,7 +1,6 @@
 package goauto
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -9,8 +8,7 @@ import (
 )
 
 func TestPipeline(t *testing.T) {
-	tp := filepath.Join("src", "github.com", "dshills", "goauto")
-	p := NewPipeline("Pipline Name", tp, os.Stdout, os.Stderr, &Workflow{})
+	p := NewPipeline("Pipline Name", Verbose)
 	assert.NotNil(t, p)
 }
 
@@ -23,8 +21,8 @@ func TestPipelineRec(t *testing.T) {
 func TestPipelineWorkflow(t *testing.T) {
 	wf := Workflow{}
 	p := Pipeline{Name: "Test Pipeline"}
-	p.AddWorkflow(&wf)
+	p.Add(&wf)
 
 	wf2 := NewWorkflow(NewGoVetTask(), NewGoLintTask())
-	p.AddWorkflow(wf2)
+	p.Add(wf2)
 }
