@@ -4,6 +4,7 @@
 package goauto
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -13,7 +14,8 @@ import (
 
 func TestSass(t *testing.T) {
 
-	p, err := AbsPath("src/github.com/dshills/goauto/testing/_sub.scss")
+	tp := filepath.Join("src", "github.com", "dshills", "goauto", "testing", "_sub.scss")
+	p, err := AbsPath(tp)
 	assert.Nil(t, err)
 	css := filepath.Join(filepath.Dir(p), "css")
 	cache := filepath.Join(css, ".sass_cache")
@@ -21,8 +23,8 @@ func TestSass(t *testing.T) {
 	st := NewSassTask(css, cache, "compressed")
 	ti := TaskInfo{
 		Src:  p,
-		Tout: os.Stdout,
-		Terr: os.Stderr,
+		Tout: ioutil.Discard,
+		Terr: ioutil.Discard,
 	}
 	err = st.Run(&ti)
 	assert.Nil(t, err)

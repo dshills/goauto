@@ -4,6 +4,7 @@
 package goauto
 
 import (
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -12,7 +13,7 @@ import (
 )
 
 func TestShellTask(t *testing.T) {
-	info := TaskInfo{Src: "FROGS", Tout: os.Stdout, Terr: os.Stderr}
+	info := TaskInfo{Src: "FROGS", Tout: ioutil.Discard, Terr: ioutil.Discard}
 
 	tsk := NewShellTask("echo", "-n")
 	err := tsk.Run(&info)
@@ -26,19 +27,24 @@ func TestShellTask(t *testing.T) {
 }
 
 func TestOSTasks(t *testing.T) {
-	path, err := AbsPath("src/github.com/dshills/goauto")
+	tp := filepath.Join("src", "github.com", "dshills", "goauto", "testing")
+	path, err := AbsPath(tp)
 	assert.Nil(t, err)
 	fname := filepath.Join(path, "testdata")
 	assert.Nil(t, err)
 	f, err := os.Create(fname)
 	defer f.Close()
 	f.WriteString("TESTING")
+	_, err = os.Stat(fname)
+	assert.Nil(t, err)
 
-	info := TaskInfo{Src: fname, Tout: os.Stdout, Terr: os.Stderr}
+	info := TaskInfo{Src: fname, Tout: ioutil.Discard, Terr: ioutil.Discard}
 
 	newPath := filepath.Join(path, "t")
 	tsk := NewMkdirTask(func(f string) string { return newPath })
 	err = tsk.Run(&info)
+	assert.Nil(t, err)
+	_, err = os.Stat(newPath)
 	assert.Nil(t, err)
 
 	info.Src = info.Target
@@ -48,22 +54,30 @@ func TestOSTasks(t *testing.T) {
 	err = tsk.Run(&info)
 	assert.Nil(t, err)
 	assert.Equal(t, newfname, info.Target)
+	_, err = os.Stat(newfname)
+	assert.Nil(t, err)
 
 	info.Src = info.Target
 
 	tsk = NewRemoveTask(Identity)
 	err = tsk.Run(&info)
 	assert.Nil(t, err)
+	_, err = os.Stat(newfname)
+	assert.NotNil(t, err)
 
 	info.Src = info.Target
 
 	tsk = NewRemoveTask(func(f string) string { return fname })
 	err = tsk.Run(&info)
 	assert.Nil(t, err)
+	_, err = os.Stat(fname)
+	assert.NotNil(t, err)
 
 	info.Src = info.Target
 
 	tsk = NewRemoveTask(func(f string) string { return newPath })
 	err = tsk.Run(&info)
 	assert.Nil(t, err)
+	_, err = os.Stat(newPath)
+	assert.NotNil(t, err)
 }

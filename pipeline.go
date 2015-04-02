@@ -6,7 +6,6 @@ package goauto
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -19,6 +18,7 @@ type Pipeline struct {
 	Watches    []string
 	Wout, Werr io.Writer
 	Workflows  []Workflower
+	Verbose    bool
 	watcher    *fsnotify.Watcher
 }
 
@@ -37,8 +37,8 @@ func NewPipeline(name string, watchDir string, wout, werr io.Writer, wf Workflow
 func (p *Pipeline) AddWatch(watchDir string) (string, error) {
 	d, err := AbsPath(watchDir)
 	if err != nil {
-		if Verbose {
-			log.Println(err)
+		if p.Verbose {
+			fmt.Fprintln(p.Wout, err)
 		}
 		return "", err
 	}
@@ -127,7 +127,7 @@ func (p *Pipeline) Watch(done <-chan bool) {
 
 	for _, w := range p.Watches {
 		watcher.Add(w)
-		if Verbose {
+		if p.Verbose {
 			fmt.Fprintf(p.Wout, "Watching %v\n", w)
 		}
 	}
@@ -137,12 +137,12 @@ func (p *Pipeline) Watch(done <-chan bool) {
 
 // queryWorkflow checks for file match for each workflow and if matches executes the workflow tasks
 func (p *Pipeline) queryWorkflow(fpath string, op uint32) {
-	if Verbose {
+	if p.Verbose {
 		fmt.Fprintf(p.Wout, "Watcher event %v %v\n", fpath, op)
 	}
 	for _, wf := range p.Workflows {
 		if wf.Match(fpath, op) {
-			wf.Run(&TaskInfo{Src: fpath, Tout: p.Wout, Terr: p.Werr})
+			wf.Run(&TaskInfo{Src: fpath, Tout: p.Wout, Terr: p.Werr, Verbose: p.Verbose})
 		}
 	}
 }

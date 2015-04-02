@@ -13,11 +13,11 @@ func (t noTask) Run(*TaskInfo) (err error) {
 }
 
 func TestNewWorkflow(t *testing.T) {
-	assert.NotPanics(t, func() {
-		NewWorkflow("WORKFLOW", ".*", noTask{})
-	}, "Should not panic")
-
-	assert.Panics(t, func() {
-		NewWorkflow("WORKFLOW", "/^[/rgsa*&", noTask{})
-	}, "Should panic")
+	wf := NewWorkflow(noTask{}, noTask{}, noTask{})
+	err := wf.WatchPattern(".*", "/^[/rgsa*&")
+	assert.NotNil(t, err)
+	err = wf.WatchPattern(".*")
+	assert.Nil(t, err)
+	err = wf.WatchPattern(".*", ".*\\.go$")
+	assert.Nil(t, err)
 }

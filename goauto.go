@@ -8,12 +8,6 @@ package goauto
 
 // Verbose is a global var that will print a lot of debug info during processing
 // This is handy for debugging. By default it is off
-var Verbose bool
-
-func init() {
-	Verbose = false
-}
-
 /*
 
 TODO

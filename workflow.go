@@ -32,26 +32,24 @@ type Workflow struct {
 	Tasks      []Tasker
 }
 
-// NewWorkflow returns a Workflow with one pattern and one task
+// NewWorkflow returns a Workflow with tasks
 // An invlid regexp pattern will cause a panic
-func NewWorkflow(name, pattern string, task Tasker) Workflower {
-	return &Workflow{
-		Name:       name,
-		Concurrent: false,
-		Op:         Create | Write | Remove | Rename,
-		Regexs:     []*regexp.Regexp{regexp.MustCompile(pattern)},
-		Tasks:      []Tasker{task},
-	}
+func NewWorkflow(tasks ...Tasker) Workflower {
+	wf := new(Workflow)
+	wf.Add(tasks...)
+	return wf
 }
 
-// AddPattern adds a regex for matching files for this workflow
+// WatchPattern adds one or more regex for matching files for this workflow
 // An invalid regexp pattern will return an error
-func (wf *Workflow) AddPattern(pattern string) error {
-	r, err := regexp.Compile(pattern)
-	if err != nil {
-		return err
+func (wf *Workflow) WatchPattern(patterns ...string) error {
+	for _, p := range patterns {
+		r, err := regexp.Compile(p)
+		if err != nil {
+			return err
+		}
+		wf.Regexs = append(wf.Regexs, r)
 	}
-	wf.Regexs = append(wf.Regexs, r)
 	return nil
 }
 
@@ -67,13 +65,15 @@ func (wf *Workflow) Match(fpath string, op uint32) bool {
 	return false
 }
 
-// AddTask adds a task to the workflow
-func (wf *Workflow) AddTask(t Tasker) {
-	wf.Tasks = append(wf.Tasks, t)
+// Add adds a task to the workflow
+func (wf *Workflow) Add(tasks ...Tasker) {
+	for _, t := range tasks {
+		wf.Tasks = append(wf.Tasks, t)
+	}
 }
 
 func (wf *Workflow) runner(info *TaskInfo) {
-	if Verbose {
+	if info.Verbose {
 		fmt.Fprintf(info.Tout, ">> %v %v for %v\n\n", time.Now().Format("2006/01/02 3:04pm"), wf.Name, info.Src)
 	}
 	fname := info.Src
@@ -83,7 +83,7 @@ func (wf *Workflow) runner(info *TaskInfo) {
 		info.Target = "" // reset the Target
 		if err = t.Run(info); err != nil {
 			fmt.Fprintln(info.Terr, err)
-			fmt.Fprintf(info.Terr, "Fail! Workflow did not complete for %v\n", fname)
+			fmt.Fprintf(info.Terr, "Fail! Workflow did not complete for %v\n\n\n", fname)
 			return
 		}
 		if info.Target != "" {

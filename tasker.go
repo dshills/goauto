@@ -15,6 +15,7 @@ type TaskInfo struct {
 	Buf        bytes.Buffer // Output of running a task
 	Tout, Terr io.Writer    // Writers to write output and errors
 	Collect    []string     // List of file names processed by a Workflow
+	Verbose    bool         // output debug info
 }
 
 // A Runner represents the function needed to satisfy a Tasker interface

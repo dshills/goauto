@@ -45,7 +45,7 @@ func (st sassTask) Run(info *TaskInfo) (err error) {
 
 	defer func() {
 		info.Tout.Write(info.Buf.Bytes())
-		if err != nil && Verbose {
+		if err != nil && info.Verbose {
 			t1 := time.Now()
 			fmt.Fprintf(info.Tout, "<< sass %v %v\n", dir, t1.Sub(t0))
 		}
