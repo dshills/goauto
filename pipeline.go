@@ -13,6 +13,11 @@ import (
 	"gopkg.in/fsnotify.v1"
 )
 
+const (
+	batchTick = 300 * time.Millisecond // batching Duration in ms
+	dirOps    = fsnotify.Create | fsnotify.Rename
+)
+
 // Flags to WatchRecursive to include or ignore hidden directories
 const (
 	IgnoreHidden  = true
@@ -35,6 +40,7 @@ type Pipeline struct {
 	watcher    *fsnotify.Watcher
 	events     chan []fsnotify.Event
 	done       chan bool
+	recDirs    map[string]bool
 }
 
 // NewPipeline returns a basic Pipeline with a dir to watch, output and error writers and a workflow
@@ -72,13 +78,16 @@ func (p *Pipeline) WatchRecursive(watchDir string, ignoreHidden bool) error {
 	if err != nil {
 		return err
 	}
+	if p.recDirs == nil {
+		p.recDirs = make(map[string]bool)
+	}
+	p.recDirs[d] = ignoreHidden
 	filepath.Walk(d, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
 		if info.IsDir() {
-			// HACKY skip hidden dir
-			if (info.Name()[:1] == ".") && ignoreHidden {
+			if IsHidden(info.Name()) && ignoreHidden {
 				return filepath.SkipDir
 			}
 			p.Watch(path)
@@ -86,6 +95,27 @@ func (p *Pipeline) WatchRecursive(watchDir string, ignoreHidden bool) error {
 		return nil
 	})
 	return nil
+}
+
+// recDir checks if an event is adding or renaming a directory in a recursive watch
+func (p *Pipeline) recDir(e fsnotify.Event) {
+	if dirOps&e.Op != e.Op {
+		return
+	}
+	if fi, err := os.Stat(e.Name); err != nil || !fi.IsDir() {
+		return
+	}
+
+	h := IsHidden(e.Name)
+	for dir, iHidden := range p.recDirs {
+		if h && iHidden {
+			continue
+		}
+		if _, err := filepath.Rel(dir, e.Name); err == nil {
+			p.WatchRecursive(e.Name, iHidden)
+			return
+		}
+	}
 }
 
 // Add adds one or more Workflows to the pipeline
@@ -98,7 +128,7 @@ func (p *Pipeline) Add(ws ...Workflower) {
 // batchRun watches for file events and batches them up based on a timer
 // **Thanks to github.com/egonelbre for the suggestions and examples for batch events
 func (p *Pipeline) batchRun() {
-	tick := time.Tick(300 * time.Millisecond)
+	tick := time.Tick(batchTick)
 	var evs []fsnotify.Event
 
 outer:
@@ -140,17 +170,22 @@ func (p *Pipeline) Start() {
 		fmt.Fprintln(p.Werr, "Pipeline", p.Name, "has no Workflows")
 	}
 
+	// Create a watcher
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		fmt.Fprintln(p.Werr, err)
 		return
 	}
 	p.watcher = watcher
+
+	// Make the channels to batch the events and signal done
 	p.done = make(chan bool)
 	p.events = make(chan []fsnotify.Event)
 
+	// start watching
 	go p.batchRun()
 
+	// Add the watch directories to the watcher
 	for _, w := range p.Watches {
 		watcher.Add(w)
 		if p.Verbose {
@@ -158,10 +193,12 @@ func (p *Pipeline) Start() {
 		}
 	}
 
+	// block and wait to receive batched events
 	for {
 		select {
 		case evs := <-p.events:
 			for _, e := range evs {
+				go p.recDir(e)
 				p.queryWorkflow(e.Name, uint32(e.Op))
 			}
 		}
