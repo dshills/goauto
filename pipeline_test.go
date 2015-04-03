@@ -13,14 +13,14 @@ func TestPipeline(t *testing.T) {
 }
 
 func TestPipelineRec(t *testing.T) {
-	p := Pipeline{Name: "Test Pipeline"}
+	p := NewPipeline("Test Pipeline", Verbose)
 	tp := filepath.Join("src", "gituhub.com", "dshills", "goauto")
 	p.WatchRecursive(tp, IgnoreHidden)
 }
 
 func TestPipelineWorkflow(t *testing.T) {
 	wf := Workflow{}
-	p := Pipeline{Name: "Test Pipeline"}
+	p := NewPipeline("Test Pipeline", Verbose)
 	p.Add(&wf)
 
 	wf2 := NewWorkflow(NewGoVetTask(), NewGoLintTask())

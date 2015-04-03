@@ -22,6 +22,8 @@ const (
 const (
 	IgnoreHidden  = true
 	IncludeHidden = false
+	AddNewDir     = true
+	IgnoreNewDir  = false
 )
 
 // Flags for verbose output
@@ -39,6 +41,7 @@ type Pipeline struct {
 	Verbose    bool
 	watcher    *fsnotify.Watcher
 	events     chan []fsnotify.Event
+	rde        chan []fsnotify.Event
 	done       chan bool
 	recDirs    map[string]bool
 }
@@ -51,25 +54,27 @@ func NewPipeline(name string, verbose bool) *Pipeline {
 
 // Watch adds a GOPATH relative or absolute path to watch
 // rejects invalid paths and ignores duplicates
-func (p *Pipeline) Watch(watchDir string) (string, error) {
-	d, err := AbsPath(watchDir)
+func (p *Pipeline) Watch(watchDir string) (d string, err error) {
+	d, err = AbsPath(watchDir)
 	if err != nil {
 		if p.Verbose {
 			fmt.Fprintln(p.Wout, err)
 		}
-		return "", err
+		return
 	}
+
 	// Make sure we are not already watching it
 	for _, w := range p.Watches {
 		if w == d {
-			return d, nil
+			return
 		}
 	}
 	p.Watches = append(p.Watches, d)
 	if p.watcher != nil {
 		p.watcher.Add(d)
 	}
-	return d, nil
+
+	return
 }
 
 // WatchRecursive adds a GOPATH relative or absolute path to watch recursivly
@@ -97,27 +102,6 @@ func (p *Pipeline) WatchRecursive(watchDir string, ignoreHidden bool) error {
 	return nil
 }
 
-// recDir checks if an event is adding or renaming a directory in a recursive watch
-func (p *Pipeline) recDir(e fsnotify.Event) {
-	if dirOps&e.Op != e.Op {
-		return
-	}
-	if fi, err := os.Stat(e.Name); err != nil || !fi.IsDir() {
-		return
-	}
-
-	h := IsHidden(e.Name)
-	for dir, iHidden := range p.recDirs {
-		if h && iHidden {
-			continue
-		}
-		if _, err := filepath.Rel(dir, e.Name); err == nil {
-			p.WatchRecursive(e.Name, iHidden)
-			return
-		}
-	}
-}
-
 // Add adds one or more Workflows to the pipeline
 func (p *Pipeline) Add(ws ...Workflower) {
 	for _, w := range ws {
@@ -125,25 +109,33 @@ func (p *Pipeline) Add(ws ...Workflower) {
 	}
 }
 
-// batchRun watches for file events and batches them up based on a timer
+// bufferEvents watches for file events and batches them up based on a timer
 // **Thanks to github.com/egonelbre for the suggestions and examples for batch events
-func (p *Pipeline) batchRun() {
+func (p *Pipeline) bufferEvents() {
 	tick := time.Tick(batchTick)
-	var evs []fsnotify.Event
+	evs := make([]fsnotify.Event, 0, 10)
+	var outCh chan []fsnotify.Event
 
 outer:
 	for {
 		select {
+		// buffer the events
 		case event := <-p.watcher.Events:
 			evs = append(evs, event)
+		// check if we have any stuff
 		case <-tick:
 			if len(evs) == 0 {
 				continue
 			}
-			p.events <- evs
-			evs = []fsnotify.Event{}
+			// allow send
+			outCh = p.events
+		// Check for done
 		case <-p.done:
 			break outer
+		// if nil skip, otherwise send when it's ready
+		case outCh <- evs:
+			evs = []fsnotify.Event{}
+			outCh = nil
 		}
 	}
 	close(p.done)
@@ -181,9 +173,15 @@ func (p *Pipeline) Start() {
 	// Make the channels to batch the events and signal done
 	p.done = make(chan bool)
 	p.events = make(chan []fsnotify.Event)
+	// Channel for checking on recursive directories
+	// We buffer it because we don't care if it gets behind the workflows
+	p.rde = make(chan []fsnotify.Event, 25)
+
+	// evaluate dir changes
+	go p.queryRecDir()
 
 	// start watching
-	go p.batchRun()
+	go p.bufferEvents()
 
 	// Add the watch directories to the watcher
 	for _, w := range p.Watches {
@@ -197,8 +195,8 @@ func (p *Pipeline) Start() {
 	for {
 		select {
 		case evs := <-p.events:
+			p.rde <- evs
 			for _, e := range evs {
-				go p.recDir(e)
 				p.queryWorkflow(e.Name, uint32(e.Op))
 			}
 		}
@@ -213,6 +211,34 @@ func (p *Pipeline) queryWorkflow(fpath string, op uint32) {
 	for _, wf := range p.Workflows {
 		if wf.Match(fpath, op) {
 			wf.Run(&TaskInfo{Src: fpath, Tout: p.Wout, Terr: p.Werr, Verbose: p.Verbose})
+		}
+	}
+}
+
+// queryRecDir checks if an event is adding or renaming a directory in a recursive watch
+// This should use a buffered channel so it doesn't slow down the worklists
+func (p *Pipeline) queryRecDir() {
+	for {
+		select {
+		case evs := <-p.rde:
+			for _, e := range evs {
+				fi, err := os.Stat(e.Name)
+				switch {
+				case err != nil || !fi.IsDir():
+					break
+				case dirOps&e.Op == e.Op:
+					h := IsHidden(e.Name)
+					for dir, iHidden := range p.recDirs {
+						if h && iHidden {
+							continue
+						}
+						if _, err := filepath.Rel(dir, e.Name); err == nil {
+							p.WatchRecursive(dir, iHidden)
+							break
+						}
+					}
+				}
+			}
 		}
 	}
 }
