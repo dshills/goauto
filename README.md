@@ -6,7 +6,7 @@
 
 Task automation for grownups. GoAuto is a package that makes building a native executable tailored to a specific work flow, simple. 
 
-Here is a complete example of a Go build process triggered by any source file in a project changing.
+Here is a complete example of a Go build and test process triggered by any source file in a project changing. The workflows are run concurrently.
 
 ```go
 package main
@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	// Create a pipeline
+	// Create a pipeline. Change Verbose to Silent after testing
 	p := goauto.NewPipeline("Go Pipeline", goauto.Verbose)
 
 	// watch directories recursivly, ignoring hidden directories
@@ -27,9 +27,10 @@ func main() {
 		panic(err)
 	}
 
-	// Create a workflow with some tasks
-	wf := goauto.NewWorkflow(goauto.NewGoVetTask(), goauto.NewGoTestTask(), goauto.NewGoLintTask(), goauto.NewGoInstallTask())
-
+	// Build Workflow
+	wf := goauto.NewWorkflow(goauto.NewGoInstallTask())
+	wf.Name = "Install"
+	wf.Concurrent = true
 	// Add a file pattern to match
 	if err := wf.WatchPattern(".*\\.go$"); err != nil {
 		panic(err)
@@ -37,6 +38,18 @@ func main() {
 
 	// Add the workflow to the pipeline
 	p.Add(wf)
+
+	// Testing Workflow
+	wft := goauto.NewWorkflow(goauto.NewGoVetTask(), goauto.NewGoTestTask(), goauto.NewGoLintTask())
+	wft.Name = "Test"
+	wft.Concurrent = true
+	// Add a file pattern to match
+	if err := wft.WatchPattern(".*\\.go$"); err != nil {
+		panic(err)
+	}
+
+	// Add the workflow to the pipeline
+	p.Add(wft)
 
 	// start the pipeline
 	p.Start()
