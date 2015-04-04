@@ -5,14 +5,17 @@ package goauto
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSass(t *testing.T) {
+	t0 := time.Now()
 
 	tp := filepath.Join("src", "github.com", "dshills", "goauto", "testing", "_sub.scss")
 	p, err := AbsPath(tp)
@@ -44,4 +47,7 @@ func TestSass(t *testing.T) {
 	_, err = os.Stat(ncm)
 	assert.Nil(t, err)
 	os.Remove(ncm)
+
+	t1 := time.Now()
+	log.Printf("TestSass finished in %v", t1.Sub(t0))
 }

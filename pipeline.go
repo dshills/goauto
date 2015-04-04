@@ -116,7 +116,6 @@ func (p *Pipeline) bufferEvents() {
 	evs := make([]fsnotify.Event, 0, 10)
 	var outCh chan []fsnotify.Event
 
-outer:
 	for {
 		select {
 		// buffer the events
@@ -129,21 +128,25 @@ outer:
 			}
 			// allow send
 			outCh = p.events
-		// Check for done
-		case <-p.done:
-			break outer
 		// if nil skip, otherwise send when it's ready
 		case outCh <- evs:
 			evs = []fsnotify.Event{}
 			outCh = nil
 		}
 	}
-	close(p.done)
 }
 
 // Start begins watching for changes to files in the Watches directories
 // Detected file changes will be compared with workflow regexp and if match will run the workflow tasks
 func (p *Pipeline) Start() {
+
+	// Make the channels to batch the events and signal done
+	p.done = make(chan bool)
+	p.events = make(chan []fsnotify.Event)
+	// Channel for checking on recursive directories
+	// We buffer it because we don't care if it gets behind the workflows
+	p.rde = make(chan []fsnotify.Event, 25)
+
 	if p.Wout == nil {
 		p.Wout = os.Stdout
 	}
@@ -170,13 +173,6 @@ func (p *Pipeline) Start() {
 	}
 	p.watcher = watcher
 
-	// Make the channels to batch the events and signal done
-	p.done = make(chan bool)
-	p.events = make(chan []fsnotify.Event)
-	// Channel for checking on recursive directories
-	// We buffer it because we don't care if it gets behind the workflows
-	p.rde = make(chan []fsnotify.Event, 25)
-
 	// evaluate dir changes
 	go p.queryRecDir()
 
@@ -192,6 +188,7 @@ func (p *Pipeline) Start() {
 	}
 
 	// block and wait to receive batched events
+outer:
 	for {
 		select {
 		case evs := <-p.events:
@@ -199,14 +196,17 @@ func (p *Pipeline) Start() {
 			for _, e := range evs {
 				p.queryWorkflow(e.Name, uint32(e.Op))
 			}
+		case <-p.done:
+			break outer
 		}
 	}
+	close(p.done)
 }
 
 // queryWorkflow checks for file match for each workflow and if matches executes the workflow tasks
 func (p *Pipeline) queryWorkflow(fpath string, op uint32) {
 	if p.Verbose {
-		fmt.Fprintf(p.Wout, "Watcher event %v %v\n", fpath, op)
+		//fmt.Fprintf(p.Wout, "Watcher event %v %v\n", fpath, op)
 	}
 	for _, wf := range p.Workflows {
 		if wf.Match(fpath, op) {
@@ -234,6 +234,9 @@ func (p *Pipeline) queryRecDir() {
 						}
 						if _, err := filepath.Rel(dir, e.Name); err == nil {
 							p.WatchRecursive(dir, iHidden)
+							if p.Verbose {
+								fmt.Fprintf(p.Wout, "Detected new watch %v\n", dir)
+							}
 							break
 						}
 					}
@@ -245,6 +248,21 @@ func (p *Pipeline) queryRecDir() {
 
 // Stop will discontinue watching for file changes
 func (p *Pipeline) Stop() {
-	p.done <- true
-	p.watcher.Close()
+	// Not sure about all this
+	// Only required if Stop is called before calling Start
+	// or calling Stop before Start can get rolling
+	if p.done != nil { // do we have a channel?
+		select {
+		case <-p.done: // is it closed?
+		default: // all good go for it
+			p.done <- true
+		}
+	}
+
+	if p.watcher != nil {
+		p.watcher.Close()
+	}
+	if p.Verbose {
+		fmt.Fprintln(p.Wout, "Pipeline stopped")
+	}
 }

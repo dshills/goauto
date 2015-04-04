@@ -5,9 +5,11 @@ package goauto
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -27,6 +29,8 @@ func TestShellTask(t *testing.T) {
 }
 
 func TestOSTasks(t *testing.T) {
+	t0 := time.Now()
+
 	tp := filepath.Join("src", "github.com", "dshills", "goauto", "testing")
 	path, err := AbsPath(tp)
 	assert.Nil(t, err)
@@ -80,4 +84,7 @@ func TestOSTasks(t *testing.T) {
 	assert.Nil(t, err)
 	_, err = os.Stat(newPath)
 	assert.NotNil(t, err)
+
+	t1 := time.Now()
+	log.Printf("TestOSTasks finished in %v", t1.Sub(t0))
 }
