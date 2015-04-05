@@ -18,40 +18,39 @@ import (
 )
 
 func main() {
-	// Create a pipeline. Change Verbose to Silent after testing
+	// Create a pipeline (Develop using Verbose, Change to Silent after testing)
 	p := goauto.NewPipeline("Go Pipeline", goauto.Verbose)
 
-	// watch directories recursivly, ignoring hidden directories
-	wd := filepath.Join("src", "github.com", "myprojects")
+	// Watch directories recursivly, ignoring hidden directories
+	wd := filepath.Join("src", "github.com", "me", "myproject")
 	if err := p.WatchRecursive(wd, goauto.IgnoreHidden); err != nil {
 		panic(err)
 	}
 
-	// Build Workflow
-	wf := goauto.NewWorkflow(goauto.NewGoInstallTask())
+	// Create a install workflow, don't wait for the tests to run
+	wf := goauto.NewWorkflow(goauto.NewGoVetTask(), goauto.NewGoLintTask(), goauto.NewGoInstallTask())
 	wf.Name = "Install"
 	wf.Concurrent = true
+
 	// Add a file pattern to match
 	if err := wf.WatchPattern(".*\\.go$"); err != nil {
 		panic(err)
 	}
 
-	// Add the workflow to the pipeline
-	p.Add(wf)
+	// Create a Test workflow
+	wf2 := goauto.NewWorkflow(goauto.NewGoTestTask())
+	wf2.Name = "Test"
+	wf2.Concurrent = true
 
-	// Testing Workflow
-	wft := goauto.NewWorkflow(goauto.NewGoVetTask(), goauto.NewGoTestTask(), goauto.NewGoLintTask())
-	wft.Name = "Test"
-	wft.Concurrent = true
 	// Add a file pattern to match
-	if err := wft.WatchPattern(".*\\.go$"); err != nil {
+	if err := wf2.WatchPattern(".*\\.go$"); err != nil {
 		panic(err)
 	}
 
-	// Add the workflow to the pipeline
-	p.Add(wft)
+	// Add workflows to pipeline
+	p.Add(wf, wf2)
 
-	// start the pipeline
+	// start the pipeline, it will block
 	p.Start()
 }
 ```
@@ -190,6 +189,7 @@ GoAuto includes a number of pre built tasks that can be used directly.
 * NewMoveTask task that moves a file
 * NewMkdirTask task that makes a new directory
 * NewCopyTask task that copies a file
+* NewRestartTask task that will restart an executable file such as a Go server or Web server
 
 ##### Web
 
