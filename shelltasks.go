@@ -42,7 +42,7 @@ func (st *shellTask) Run(info *TaskInfo) (err error) {
 	cmd.Stderr = info.Terr
 
 	defer func() {
-		info.Tout.Write(info.Buf.Bytes())
+		fmt.Fprint(info.Tout, info.Buf)
 		if err != nil && info.Verbose {
 			t1 := time.Now()
 			fmt.Fprintf(info.Tout, ">>> %v %v %v\n", st.cmd, st.args, t1.Sub(t0))
@@ -70,7 +70,7 @@ func cat(info *TaskInfo) (err error) {
 	if err != nil {
 		return
 	}
-	info.Buf.WriteTo(info.Tout)
+	fmt.Fprint(info.Tout, info.Buf)
 	if err != nil && info.Verbose {
 		fmt.Fprintf(info.Tout, ">>> cat %v", info.Target)
 	}

@@ -34,7 +34,7 @@ func (gt *goPrjTask) Run(info *TaskInfo) (err error) {
 	gocmd.Stdout = &info.Buf
 	gocmd.Stderr = info.Terr
 	defer func() {
-		info.Buf.WriteTo(info.Tout)
+		fmt.Fprint(info.Tout, info.Buf.String())
 		if err == nil && info.Verbose {
 			t1 := time.Now()
 			fmt.Fprintf(info.Tout, "<< Go %v %v %v\n", strings.Title(gt.gocmd), dir, t1.Sub(t0))
@@ -77,7 +77,7 @@ func (lt *goLintTask) Run(info *TaskInfo) (err error) {
 	cmd.Stdout = &info.Buf
 	cmd.Stderr = info.Terr
 	defer func() {
-		info.Buf.WriteTo(info.Tout)
+		fmt.Fprint(info.Tout, info.Buf.String())
 		if err == nil && info.Verbose {
 			t1 := time.Now()
 			fmt.Fprintf(info.Tout, ">>> Go Lint %v %v\n", dir, t1.Sub(t0))

@@ -42,3 +42,10 @@ func TestRestartExited(t *testing.T) {
 	err = tsk.Kill(&ti)
 	assert.Nil(t, err)
 }
+
+func TestRestartWorkflow(t *testing.T) {
+	tsk := NewRestartTask("echo", "GoAuto!!!") // non blocking command
+	ti := TaskInfo{Tout: os.Stdout, Terr: os.Stderr, Verbose: Verbose}
+	wf := NewWorkflow(tsk)
+	wf.Run(&ti)
+}
