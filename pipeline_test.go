@@ -12,12 +12,12 @@ import (
 )
 
 func TestPipeline(t *testing.T) {
-	p := NewPipeline("Pipline Name", Verbose)
+	p := NewPipeline("Pipline Name", Silent)
 	assert.NotNil(t, p)
 }
 
 func TestPipelineRec(t *testing.T) {
-	p := NewPipeline("Test Pipeline", Verbose)
+	p := NewPipeline("Test Pipeline", Silent)
 	tp := filepath.Join("src", "github.com", "dshills", "goauto")
 	err := p.WatchRecursive(tp, IgnoreHidden)
 	assert.Nil(t, err)
@@ -34,7 +34,7 @@ func TestPipelineWorkflow(t *testing.T) {
 
 func TestPipelineConcurrency(t *testing.T) {
 	t0 := time.Now()
-	p := NewPipeline("Test Pipeline", Verbose)
+	p := NewPipeline("Test Pipeline", Silent)
 	tp := filepath.Join("src", "github.com", "dshills", "goauto", "testing")
 	err := p.WatchRecursive(tp, IgnoreHidden)
 	assert.Nil(t, err)

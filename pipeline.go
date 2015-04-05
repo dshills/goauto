@@ -58,7 +58,7 @@ func (p *Pipeline) Watch(watchDir string) (d string, err error) {
 	d, err = AbsPath(watchDir)
 	if err != nil {
 		if p.Verbose {
-			fmt.Fprintln(p.Wout, err)
+			fmt.Fprintf(p.Werr, "> %v", err)
 		}
 		return
 	}
@@ -183,7 +183,7 @@ func (p *Pipeline) Start() {
 	for _, w := range p.Watches {
 		watcher.Add(w)
 		if p.Verbose {
-			fmt.Fprintf(p.Wout, "Watching %v\n", w)
+			fmt.Fprintf(p.Wout, "> Watching %v\n", w)
 		}
 	}
 
@@ -206,7 +206,7 @@ outer:
 // queryWorkflow checks for file match for each workflow and if matches executes the workflow tasks
 func (p *Pipeline) queryWorkflow(fpath string, op uint32) {
 	if p.Verbose {
-		//fmt.Fprintf(p.Wout, "Watcher event %v %v\n", fpath, op)
+		fmt.Fprintf(p.Wout, ">> Watcher event %v %v\n", fpath, op)
 	}
 	for _, wf := range p.Workflows {
 		if wf.Match(fpath, op) {
@@ -235,7 +235,7 @@ func (p *Pipeline) queryRecDir() {
 						if _, err := filepath.Rel(dir, e.Name); err == nil {
 							p.WatchRecursive(dir, iHidden)
 							if p.Verbose {
-								fmt.Fprintf(p.Wout, "Detected new watch %v\n", dir)
+								fmt.Fprintf(p.Wout, "> Detected new watch %v\n", dir)
 							}
 							break
 						}
@@ -263,6 +263,6 @@ func (p *Pipeline) Stop() {
 		p.watcher.Close()
 	}
 	if p.Verbose {
-		fmt.Fprintln(p.Wout, "Pipeline stopped")
+		fmt.Fprintln(p.Wout, "> Pipeline stopped")
 	}
 }
