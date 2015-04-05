@@ -45,7 +45,7 @@ func (st *shellTask) Run(info *TaskInfo) (err error) {
 		info.Tout.Write(info.Buf.Bytes())
 		if err != nil && info.Verbose {
 			t1 := time.Now()
-			fmt.Fprintf(info.Tout, "<< %v %v %v\n", st.cmd, st.args, t1.Sub(t0))
+			fmt.Fprintf(info.Tout, ">>> %v %v %v\n", st.cmd, st.args, t1.Sub(t0))
 		}
 	}()
 	err = cmd.Run()
@@ -72,7 +72,7 @@ func cat(info *TaskInfo) (err error) {
 	}
 	info.Buf.WriteTo(info.Tout)
 	if err != nil && info.Verbose {
-		fmt.Fprintf(info.Tout, "<< cat %v", info.Target)
+		fmt.Fprintf(info.Tout, ">>> cat %v", info.Target)
 	}
 	return
 }
@@ -86,7 +86,7 @@ func NewRemoveTask(t Transformer) Tasker {
 func remove(info *TaskInfo) (err error) {
 	err = os.Remove(info.Target)
 	if err != nil && info.Verbose {
-		fmt.Fprintf(info.Tout, "<< Remove %v", info.Target)
+		fmt.Fprintf(info.Tout, ">>> Remove %v", info.Target)
 	}
 	return
 }
@@ -100,7 +100,7 @@ func NewMoveTask(t Transformer) Tasker {
 func move(info *TaskInfo) (err error) {
 	err = os.Rename(info.Src, info.Target)
 	if err != nil && info.Verbose {
-		fmt.Fprintf(info.Tout, "<< Renaming %v to %v", info.Src, info.Target)
+		fmt.Fprintf(info.Tout, ">>> Renaming %v to %v", info.Src, info.Target)
 	}
 	return
 }
@@ -118,7 +118,7 @@ func mkdir(info *TaskInfo) (err error) {
 		return
 	}
 	if err != nil && info.Verbose {
-		fmt.Fprintf(info.Tout, "<< mkdir %v\n", dir)
+		fmt.Fprintf(info.Tout, ">>> mkdir %v\n", dir)
 	}
 	return
 }
@@ -146,7 +146,7 @@ func fcopy(info *TaskInfo) (err error) {
 			err = cerr
 		}
 		if err != nil && info.Verbose {
-			fmt.Fprintf(info.Tout, "<< Copy %v to %v\n", info.Src, info.Target)
+			fmt.Fprintf(info.Tout, ">>> Copy %v to %v\n", info.Src, info.Target)
 		}
 	}()
 	if _, err = io.Copy(out, in); err != nil {

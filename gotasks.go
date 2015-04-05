@@ -80,7 +80,7 @@ func (lt *goLintTask) Run(info *TaskInfo) (err error) {
 		info.Buf.WriteTo(info.Tout)
 		if err == nil && info.Verbose {
 			t1 := time.Now()
-			fmt.Fprintf(info.Tout, "<< Go Lint %v %v\n", dir, t1.Sub(t0))
+			fmt.Fprintf(info.Tout, ">>> Go Lint %v %v\n", dir, t1.Sub(t0))
 		}
 	}()
 	if err = cmd.Run(); err != nil {
