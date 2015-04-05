@@ -28,18 +28,18 @@ func TestPipelineWorkflow(t *testing.T) {
 	p := NewPipeline("Test Pipeline", Verbose)
 	p.Add(&wf)
 
-	wf2 := NewWorkflow(NewGoVetTask(), NewGoLintTask())
+	wf2 := NewWorkflow()
 	p.Add(wf2)
 }
 
 func TestPipelineConcurrency(t *testing.T) {
 	t0 := time.Now()
-	p := NewPipeline("Test Pipeline", Silent)
+	p := NewPipeline("Test Pipeline", Verbose)
 	tp := filepath.Join("src", "github.com", "dshills", "goauto", "testing")
 	err := p.WatchRecursive(tp, IgnoreHidden)
 	assert.Nil(t, err)
 
-	wf := NewWorkflow(NewGoVetTask(), NewGoLintTask(), NewGoBuildTask())
+	wf := NewWorkflow()
 	p.Add(wf)
 
 	p.Stop()
