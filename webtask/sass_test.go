@@ -1,7 +1,7 @@
 // Copyright 2015 Davin Hills. All rights reserved.
 // MIT license. License details can be found in the LICENSE file.
 
-package goauto
+package webtask
 
 import (
 	"io/ioutil"
@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dshills/goauto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,13 +19,13 @@ func TestSass(t *testing.T) {
 	t0 := time.Now()
 
 	tp := filepath.Join("src", "github.com", "dshills", "goauto", "testing", "_sub.scss")
-	p, err := AbsPath(tp)
+	p, err := goauto.AbsPath(tp)
 	assert.Nil(t, err)
 	css := filepath.Join(filepath.Dir(p), "css")
 	cache := filepath.Join(css, ".sass_cache")
 
 	st := NewSassTask(css, cache, "compressed")
-	ti := TaskInfo{
+	ti := goauto.TaskInfo{
 		Src:  p,
 		Tout: ioutil.Discard,
 		Terr: ioutil.Discard,

@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 
 	"github.com/dshills/goauto"
+	"github.com/dshills/goauto/gotask"
 )
 
 func main() {
@@ -27,8 +28,8 @@ func main() {
 		panic(err)
 	}
 
-	// Create a install workflow, don't wait for the tests to run
-	wf := goauto.NewWorkflow(goauto.NewGoVetTask(), goauto.NewGoLintTask(), goauto.NewGoInstallTask())
+	// Create an install workflow, don't wait for the tests to run
+	wf := goauto.NewWorkflow(gotask.NewGoVetTask(), gotask.NewGoLintTask(), gotask.NewGoInstallTask())
 	wf.Name = "Install"
 	wf.Concurrent = true
 
@@ -38,7 +39,7 @@ func main() {
 	}
 
 	// Create a Test workflow
-	wf2 := goauto.NewWorkflow(goauto.NewGoTestTask())
+	wf2 := goauto.NewWorkflow(gotask.NewGoTestTask())
 	wf2.Name = "Test"
 	wf2.Concurrent = true
 
@@ -172,7 +173,7 @@ Tasks are generally small, atomic pieces of work. Run tests, compile, copy a fil
 #### Task Builtins
 GoAuto includes a number of pre built tasks that can be used directly.
 
-##### Go
+##### goauto/gotask
 
 * NewGoPrjTask will run a go command with arguments
 * NewGoTestTask will run tests for a project
@@ -181,7 +182,7 @@ GoAuto includes a number of pre built tasks that can be used directly.
 * NewGoInstallTask will run install for a project
 * NewGoLintTask will run golint for a project
 
-##### Shell
+##### goauto/shelltask
 
 * NewShellTask task that runs a shell command with arguments
 * NewCatTask task that cats a file
@@ -191,7 +192,7 @@ GoAuto includes a number of pre built tasks that can be used directly.
 * NewCopyTask task that copies a file
 * NewRestartTask task that will restart an executable file such as a Go server or Web server
 
-##### Web
+##### goauto/webtask
 
 * NewSassTask task that runs sass command line utility with options
 
@@ -204,14 +205,14 @@ NewShellTask will return a new Tasker that will call a shell function with argum
 
 	func NewShellTask(cmd string, args ...string) Tasker
 
-	st := NewShellTask("echo", "-n") // a Task that will echo the source file name
+	st := shelltask.NewShellTask("echo", "-n") // a Task that will echo the source file name
 
 
 NewGoPrjTask will produce a new Tasker that will call the go command in the directory of target file
 
 	func NewGoPrjTask(gocmd string, args ...string) Tasker 
 
-	gt := NewGoPrjTask('build') // A fancy new task that will build a project
+	gt := gotask.NewGoPrjTask('build') // A fancy new task that will build a project
 
 #### TaskInfo
 Before diving into task building we need to introduce the TaskInfo struct. TaskInfo is passed between tasks as they run. 

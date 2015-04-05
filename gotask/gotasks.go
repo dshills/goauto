@@ -1,7 +1,7 @@
 // Copyright 2015 Davin Hills. All rights reserved.
 // MIT license. License details can be found in the LICENSE file.
 
-package goauto
+package gotask
 
 import (
 	"errors"
@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/dshills/goauto"
 )
 
 type goPrjTask struct {
@@ -16,18 +18,18 @@ type goPrjTask struct {
 	args  []string
 }
 
-// NewGoPrjTask returns a Tasker that runs a go command with optional arguments
-// All of the commands are run on the project directory associated with TaskInfo.Target
-// TaskInfo.Target is not updated
-func NewGoPrjTask(gocmd string, args ...string) Tasker {
+// NewGoPrjTask returns a goauto.Tasker that runs a go command with optional arguments
+// All of the commands are run on the project directory associated with goauto.TaskInfo.Target
+// goauto.TaskInfo.Target is not updated
+func NewGoPrjTask(gocmd string, args ...string) goauto.Tasker {
 	return &goPrjTask{gocmd: gocmd, args: args}
 }
 
-func (gt *goPrjTask) Run(info *TaskInfo) (err error) {
+func (gt *goPrjTask) Run(info *goauto.TaskInfo) (err error) {
 	t0 := time.Now()
 	info.Target = info.Src
 	info.Buf.Reset()
-	dir := GoRelSrcDir(info.Src)
+	dir := goauto.GoRelSrcDir(info.Src)
 	targs := append([]string{gt.gocmd}, gt.args...)
 	targs = append(targs, dir)
 	gocmd := exec.Command("go", targs...)
@@ -44,22 +46,22 @@ func (gt *goPrjTask) Run(info *TaskInfo) (err error) {
 }
 
 // NewGoTestTask returns a new task that will run all the project tests
-func NewGoTestTask(args ...string) Tasker {
+func NewGoTestTask(args ...string) goauto.Tasker {
 	return &goPrjTask{gocmd: "test", args: args}
 }
 
 // NewGoVetTask returns a new task that will vet the project
-func NewGoVetTask(args ...string) Tasker {
+func NewGoVetTask(args ...string) goauto.Tasker {
 	return &goPrjTask{gocmd: "vet", args: args}
 }
 
 // NewGoBuildTask returns a task that will build the project
-func NewGoBuildTask(args ...string) Tasker {
+func NewGoBuildTask(args ...string) goauto.Tasker {
 	return &goPrjTask{gocmd: "build", args: args}
 }
 
 // NewGoInstallTask returns a task that will install the project
-func NewGoInstallTask(args ...string) Tasker {
+func NewGoInstallTask(args ...string) goauto.Tasker {
 	return &goPrjTask{gocmd: "install", args: args}
 }
 
@@ -67,11 +69,11 @@ type goLintTask struct {
 	args []string
 }
 
-func (lt *goLintTask) Run(info *TaskInfo) (err error) {
+func (lt *goLintTask) Run(info *goauto.TaskInfo) (err error) {
 	t0 := time.Now()
 	info.Target = info.Src
 	info.Buf.Reset()
-	dir := GoRelSrcDir(info.Src)
+	dir := goauto.GoRelSrcDir(info.Src)
 	targs := append(lt.args, dir)
 	cmd := exec.Command("golint", targs...)
 	cmd.Stdout = &info.Buf
@@ -94,6 +96,6 @@ func (lt *goLintTask) Run(info *TaskInfo) (err error) {
 }
 
 // NewGoLintTask returns a task that will golint the project
-func NewGoLintTask(args ...string) Tasker {
+func NewGoLintTask(args ...string) goauto.Tasker {
 	return &goLintTask{args: args}
 }

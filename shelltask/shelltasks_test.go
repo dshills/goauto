@@ -1,7 +1,7 @@
 // Copyright 2015 Davin Hills. All rights reserved.
 // MIT license. License details can be found in the LICENSE file.
 
-package goauto
+package shelltask
 
 import (
 	"io/ioutil"
@@ -11,18 +11,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dshills/goauto"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestShellTask(t *testing.T) {
-	info := TaskInfo{Src: "FROGS", Tout: ioutil.Discard, Terr: ioutil.Discard}
+	info := goauto.TaskInfo{Src: "FROGS", Tout: ioutil.Discard, Terr: ioutil.Discard}
 
 	tsk := NewShellTask("echo", "-n")
 	err := tsk.Run(&info)
 	assert.Nil(t, err)
 	assert.Equal(t, "FROGS", info.Buf.String())
 
-	tsk = NewShellTaskT(Identity, "echo", "-n")
+	tsk = NewShellTaskT(goauto.Identity, "echo", "-n")
 	err = tsk.Run(&info)
 	assert.Nil(t, err)
 	assert.Equal(t, "FROGS", info.Buf.String())
@@ -32,7 +33,7 @@ func TestOSTasks(t *testing.T) {
 	t0 := time.Now()
 
 	tp := filepath.Join("src", "github.com", "dshills", "goauto", "testing")
-	path, err := AbsPath(tp)
+	path, err := goauto.AbsPath(tp)
 	assert.Nil(t, err)
 	fname := filepath.Join(path, "testdata")
 	assert.Nil(t, err)
@@ -42,7 +43,7 @@ func TestOSTasks(t *testing.T) {
 	_, err = os.Stat(fname)
 	assert.Nil(t, err)
 
-	info := TaskInfo{Src: fname, Tout: ioutil.Discard, Terr: ioutil.Discard}
+	info := goauto.TaskInfo{Src: fname, Tout: ioutil.Discard, Terr: ioutil.Discard}
 
 	newPath := filepath.Join(path, "t")
 	tsk := NewMkdirTask(func(f string) string { return newPath })
@@ -63,7 +64,7 @@ func TestOSTasks(t *testing.T) {
 
 	info.Src = info.Target
 
-	tsk = NewRemoveTask(Identity)
+	tsk = NewRemoveTask(goauto.Identity)
 	err = tsk.Run(&info)
 	assert.Nil(t, err)
 	_, err = os.Stat(newfname)

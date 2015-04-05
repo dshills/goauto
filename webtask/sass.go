@@ -1,13 +1,15 @@
 // Copyright 2015 Davin Hills. All rights reserved.
 // MIT license. License details can be found in the LICENSE file.
 
-package goauto
+package webtask
 
 import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
 	"time"
+
+	"github.com/dshills/goauto"
 )
 
 type sassTask struct {
@@ -19,7 +21,7 @@ type sassTask struct {
 // sass must be in the PATH
 // Blank strings for cssDir, cachDir or style will use sass defaults
 // TaskInfo.Target will not be updated
-func NewSassTask(cssDir, cacheDir, style string) Tasker {
+func NewSassTask(cssDir, cacheDir, style string) goauto.Tasker {
 	st := sassTask{cssDir: cssDir}
 	if cacheDir != "" {
 		st.args = append(st.args, "--cache-location", cacheDir)
@@ -30,7 +32,7 @@ func NewSassTask(cssDir, cacheDir, style string) Tasker {
 	return st
 }
 
-func (st sassTask) Run(info *TaskInfo) (err error) {
+func (st sassTask) Run(info *goauto.TaskInfo) (err error) {
 	t0 := time.Now()
 	dir := filepath.Dir(info.Src)
 	info.Buf.Reset()

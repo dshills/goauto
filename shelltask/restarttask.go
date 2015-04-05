@@ -1,12 +1,14 @@
 // Copyright 2015 Davin Hills. All rights reserved.
 // MIT license. License details can be found in the LICENSE file.
 
-package goauto
+package shelltask
 
 import (
 	"errors"
 	"fmt"
 	"os/exec"
+
+	"github.com/dshills/goauto"
 )
 
 // A RestartTask represents a task to launch or relaunch an executable file
@@ -22,7 +24,7 @@ func NewRestartTask(cmd string, args ...string) *RestartTask {
 }
 
 // Restart will launch or relaunch the application
-func (r *RestartTask) Restart(t *TaskInfo) (err error) {
+func (r *RestartTask) Restart(t *goauto.TaskInfo) (err error) {
 	if r.Cmd == "" {
 		return errors.New("Cmd not set, Nothing to run")
 	}
@@ -45,7 +47,7 @@ func (r *RestartTask) Restart(t *TaskInfo) (err error) {
 }
 
 // Kill will stop the running task
-func (r *RestartTask) Kill(t *TaskInfo) (err error) {
+func (r *RestartTask) Kill(t *goauto.TaskInfo) (err error) {
 	defer func() { r.ecmd = nil }()
 	if r.ecmd == nil || r.ecmd.Process == nil {
 		return
@@ -69,6 +71,6 @@ func (r *RestartTask) Kill(t *TaskInfo) (err error) {
 }
 
 // Run will restart the application in Cmd
-func (r *RestartTask) Run(t *TaskInfo) (err error) {
+func (r *RestartTask) Run(t *goauto.TaskInfo) (err error) {
 	return r.Restart(t)
 }
