@@ -21,7 +21,7 @@ func NewRestartTask(cmd string, args ...string) *RestartTask {
 	return &RestartTask{Cmd: cmd, Args: args}
 }
 
-// Reload will launch or relaunch the application
+// Restart will launch or relaunch the application
 func (r *RestartTask) Restart(t *TaskInfo) (err error) {
 	if r.Cmd == "" {
 		return errors.New("Cmd not set, Nothing to run")
