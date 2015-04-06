@@ -1,80 +1,88 @@
 package goauto
 
 import (
-	"log"
-	"os"
 	"path/filepath"
-	"strconv"
 	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestPipeline(t *testing.T) {
 	p := NewPipeline("Pipline Name", Silent)
-	assert.NotNil(t, p)
+	if p == nil {
+		t.Errorf("Failed to create a Pipeline\n")
+	}
+	wf := Workflow{}
+	p.Add(&wf)
 }
 
 func TestPipelineRec(t *testing.T) {
 	p := NewPipeline("Test Pipeline", Silent)
 	tp := filepath.Join("src", "github.com", "dshills", "goauto")
 	err := p.WatchRecursive(tp, IgnoreHidden)
-	assert.Nil(t, err)
-}
+	if err != nil {
+		t.Errorf("WatchRecursive failed %v\n", err)
+	}
 
-func TestPipelineWorkflow(t *testing.T) {
-	wf := Workflow{}
-	p := NewPipeline("Test Pipeline", Verbose)
-	p.Add(&wf)
-
-	wf2 := NewWorkflow()
-	p.Add(wf2)
+	tp = filepath.Join("src", "bogus", "bogus", "bogus")
+	err = p.WatchRecursive(tp, IgnoreHidden)
+	if err == nil {
+		t.Errorf("WatchRecursive allowed bogus path %v\n", tp)
+	}
 }
 
 func TestPipelineConcurrency(t *testing.T) {
-	t0 := time.Now()
-	p := NewPipeline("Test Pipeline", Verbose)
+	p := NewPipeline("Test Pipeline", Silent)
 	tp := filepath.Join("src", "github.com", "dshills", "goauto", "testing")
 	err := p.WatchRecursive(tp, IgnoreHidden)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Errorf("WatchRecursive failed %v\n", err)
+	}
 
 	wf := NewWorkflow()
 	p.Add(wf)
 
+	// Run stop before starting
 	p.Stop()
 
+	// Run Pipeline concurrently
 	go p.Start()
+
+	/* Not a reliable test. Sometimes it works depending on how fast it detects the dir add
 
 	atp, err := AbsPath(tp)
-	assert.Nil(t, err)
-	for i := 0; i < 100; i++ {
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add sub directories to detect changes
+	pl := make([]string, 0, 2)
+	for i := 0; i < 2; i++ {
 		n := filepath.Join(atp, strconv.Itoa(i))
+		pl = append(pl, n)
 		os.Mkdir(n, 0744)
 	}
 
-	for i := 0; i < 100; i++ {
+	// This sucks to test!
+	// No gurantees about how long before fsnotify is triggered
+	time.Sleep(5 * time.Second)
+
+	var fnd int
+	for i, n := range pl {
+		for _, v := range p.Watches {
+			if n == v {
+				fnd = i
+			}
+		}
+		if fnd != i {
+			t.Errorf("Pipeline failed to detect new dir %v\n", n)
+		}
+	}
+
+	for i := 0; i < 10; i++ {
 		n := filepath.Join(atp, strconv.Itoa(i))
 		os.Remove(n)
 	}
+	*/
 
 	p.Stop()
 
-	go p.Start()
-
-	for i := 0; i < 100; i++ {
-		n := filepath.Join(atp, strconv.Itoa(i))
-		os.Mkdir(n, 0744)
-	}
-
-	for i := 0; i < 100; i++ {
-		n := filepath.Join(atp, strconv.Itoa(i))
-		os.Remove(n)
-	}
-
-	time.Sleep(2 * time.Second)
-	p.Stop()
-
-	t1 := time.Now()
-	log.Printf("TestPipelineConcurrency finished in %v", t1.Sub(t0))
 }

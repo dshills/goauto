@@ -5,87 +5,117 @@ package shelltask
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/dshills/goauto"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestShellTask(t *testing.T) {
-	info := goauto.TaskInfo{Src: "FROGS", Tout: ioutil.Discard, Terr: ioutil.Discard}
+	e := "FROGS"
+
+	info := goauto.TaskInfo{Src: e, Tout: ioutil.Discard, Terr: ioutil.Discard}
 
 	tsk := NewShellTask("echo", "-n")
 	err := tsk.Run(&info)
-	assert.Nil(t, err)
-	assert.Equal(t, "FROGS", info.Buf.String())
+	if err != nil {
+		t.Error(err)
+	}
+	if info.Buf.String() != e {
+		t.Errorf("Expected %v got %v\n", e, info.Buf.String())
+	}
 
 	tsk = NewShellTaskT(goauto.Identity, "echo", "-n")
 	err = tsk.Run(&info)
-	assert.Nil(t, err)
-	assert.Equal(t, "FROGS", info.Buf.String())
+	if err != nil {
+		t.Error(err)
+	}
+	if info.Buf.String() != e {
+		t.Errorf("Expected %v got %v\n", e, info.Buf.String())
+	}
 }
 
 func TestOSTasks(t *testing.T) {
-	t0 := time.Now()
-
 	tp := filepath.Join("src", "github.com", "dshills", "goauto", "testing")
 	path, err := goauto.AbsPath(tp)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 	fname := filepath.Join(path, "testdata")
-	assert.Nil(t, err)
 	f, err := os.Create(fname)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer f.Close()
 	f.WriteString("TESTING")
 	_, err = os.Stat(fname)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	info := goauto.TaskInfo{Src: fname, Tout: ioutil.Discard, Terr: ioutil.Discard}
 
 	newPath := filepath.Join(path, "t")
 	tsk := NewMkdirTask(func(f string) string { return newPath })
 	err = tsk.Run(&info)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 	_, err = os.Stat(newPath)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 
 	info.Src = info.Target
 
 	newfname := filepath.Join(newPath, "testdata2")
 	tsk = NewCopyTask(func(string) string { return newfname })
 	err = tsk.Run(&info)
-	assert.Nil(t, err)
-	assert.Equal(t, newfname, info.Target)
+	if err != nil {
+		t.Error(err)
+	}
+	if newfname != info.Target {
+		t.Errorf("Expected %v got %v\n", newfname, info.Target)
+	}
 	_, err = os.Stat(newfname)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 
 	info.Src = info.Target
 
 	tsk = NewRemoveTask(goauto.Identity)
 	err = tsk.Run(&info)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 	_, err = os.Stat(newfname)
-	assert.NotNil(t, err)
+	if err == nil {
+		t.Errorf("Expected error, file should be gone\n")
+	}
 
 	info.Src = info.Target
 
 	tsk = NewRemoveTask(func(f string) string { return fname })
 	err = tsk.Run(&info)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 	_, err = os.Stat(fname)
-	assert.NotNil(t, err)
+	if err == nil {
+		t.Errorf("Expected error, file should be gone\n")
+	}
 
 	info.Src = info.Target
 
 	tsk = NewRemoveTask(func(f string) string { return newPath })
 	err = tsk.Run(&info)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Error(err)
+	}
 	_, err = os.Stat(newPath)
-	assert.NotNil(t, err)
-
-	t1 := time.Now()
-	log.Printf("TestOSTasks finished in %v", t1.Sub(t0))
+	if err == nil {
+		t.Errorf("Expected error, file should be gone\n")
+	}
 }

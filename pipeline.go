@@ -22,8 +22,6 @@ const (
 const (
 	IgnoreHidden  = true
 	IncludeHidden = false
-	AddNewDir     = true
-	IgnoreNewDir  = false
 )
 
 // Flags for verbose output
@@ -201,14 +199,14 @@ outer:
 		}
 	}
 	close(p.done)
-	p.done = nil
 }
 
 // queryWorkflow checks for file match for each workflow and if matches executes the workflow tasks
 func (p *Pipeline) queryWorkflow(fpath string, op uint32) {
-	if p.Verbose {
-		fmt.Fprintf(p.Wout, ">> Watcher event %v %v\n", fpath, op)
-	}
+	// Actually gets in the way of debugging but on occasion...
+	//if p.Verbose {
+	//	fmt.Fprintf(p.Wout, ">> Watcher event %v %v\n", fpath, op)
+	//}
 	for _, wf := range p.Workflows {
 		if wf.Match(fpath, op) {
 			wf.Run(&TaskInfo{Src: fpath, Tout: p.Wout, Terr: p.Werr, Verbose: p.Verbose})
@@ -236,7 +234,7 @@ func (p *Pipeline) queryRecDir() {
 						if _, err := filepath.Rel(dir, e.Name); err == nil {
 							p.WatchRecursive(dir, iHidden)
 							if p.Verbose {
-								fmt.Fprintf(p.Wout, "> Detected new watch %v\n", dir)
+								fmt.Fprintf(p.Wout, "> Detected new watch %v\n", e.Name)
 							}
 							break
 						}

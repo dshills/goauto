@@ -6,23 +6,28 @@ package goauto
 import (
 	"path/filepath"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestGoPaths(t *testing.T) {
 	gps := GoPaths()
-	assert.NotEmpty(t, gps)
+	if len(gps) < 1 {
+		t.Errorf("GoPaths returned no data\n")
+	}
 }
 
 func TestAbsPath(t *testing.T) {
 	tp := filepath.Join("src", "github.com", "dshills", "goauto")
 	ap, err := AbsPath(tp)
-	assert.Nil(t, err)
-	assert.NotEqual(t, ap, tp)
+	if err != nil {
+		t.Errorf("AbsPath error: %v\n", err)
+	}
+	if ap == tp {
+		t.Errorf("AbsPath: %v should not equal %v\n", ap, tp)
+	}
 
-	/* local test
-	assert.Equal(t, "/Users/dshills/Development/Go/src/github.com/dshills/goauto", ap)
-	*/
+	expect := "/Users/dshills/Development/Go/src/github.com/dshills/goauto"
+	if ap != expect {
+		t.Errorf("Expected %v Got %v\n", expect, ap)
+	}
 
 }

@@ -3,31 +3,44 @@
 
 package goauto
 
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
+import "testing"
 
 func TestTransforms(t *testing.T) {
-	i := "TRANSFORM"
-	o := Identity(i)
-	assert.Equal(t, i, o)
+	var e, i, o string
+
+	i = "TRANSFORM"
+	o = Identity(i)
+	if i != o {
+		t.Errorf("Expected %v got %v", i, o)
+	}
 
 	/* Only works local, obviously
 	i = "/Users/dshills/Development/Go/src/github.com/dshills/goauto/transform.go"
+
+	e = "src/github.com/dshills/goauto/transform.go"
 	o = GoRelBase(i)
-	assert.Equal(t, "src/github.com/dshills/goauto/transform.go", o)
+	if o != e {
+		t.Errorf("Expected %v got %v", e, o)
+	}
 
 	o = GoRelDir(i)
-	assert.Equal(t, "src/github.com/dshills/goauto", o)
+	e = "src/github.com/dshills/goauto"
+	if o != e {
+		t.Errorf("Expected %v got %v", e, o)
+	}
 
 	o = GoRelSrcDir(i)
-	assert.Equal(t, "github.com/dshills/goauto", o)
+	e = "github.com/dshills/goauto"
+	if o != e {
+		t.Errorf("Expected %v got %v", e, o)
+	}
 	*/
 
 	i = "transform.go"
 	fx := ExtTransformer("js")
 	o = fx(i)
-	assert.Equal(t, "transform.js", o)
+	e = "transform.js"
+	if o != e {
+		t.Errorf("Expected %v got %v", e, o)
+	}
 }

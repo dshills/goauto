@@ -6,8 +6,6 @@ package goauto
 import (
 	"errors"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 type testTask struct {
@@ -25,9 +23,13 @@ func TestTask(t *testing.T) {
 	info := TaskInfo{}
 	tsk := testTask{}
 	err := tsk.Run(&info)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Errorf("TestTask returned %v", err)
+	}
 
 	tsk.showError = true
 	err = tsk.Run(&info)
-	assert.NotNil(t, err)
+	if err == nil {
+		t.Errorf("TestTask should have returned an error")
+	}
 }
