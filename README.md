@@ -60,6 +60,7 @@ func main() {
 * No config files
 * Built in support for Go projects
 * No new syntax just Go
+* No external dependencies
 * Highly customizable
 * Fast
 * Small
