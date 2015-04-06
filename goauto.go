@@ -6,10 +6,7 @@
 // See README.md for more details on usage
 package goauto
 
-// Verbose is a global var that will print a lot of debug info during processing
-// This is handy for debugging. By default it is off
 /*
-
 TODO
 More built in tasks
 Write more tests. Can always use more tests

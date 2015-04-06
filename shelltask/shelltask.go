@@ -1,6 +1,8 @@
 // Copyright 2015 Davin Hills. All rights reserved.
 // MIT license. License details can be found in the LICENSE file.
 
+// Package shelltask implements a set of tasks to interact with the shell.
+// Each task is intended to do one discrete thing such as file copy or rename.
 package shelltask
 
 import (
