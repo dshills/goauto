@@ -201,6 +201,7 @@ outer:
 		}
 	}
 	close(p.done)
+	p.done = nil
 }
 
 // queryWorkflow checks for file match for each workflow and if matches executes the workflow tasks
