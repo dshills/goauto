@@ -32,6 +32,19 @@ type Tasker interface {
 	Run(info *TaskInfo) (err error)
 }
 
+type emptyTask struct{}
+
+func (t *emptyTask) Run(i *TaskInfo) error {
+	i.Target = i.Src
+	i.Buf.Reset()
+	return nil
+}
+
+// NewEmptyTask returns a Task that does nothing. Can be useful for testing
+func NewEmptyTask() Tasker {
+	return &emptyTask{}
+}
+
 type task struct {
 	Transform Transformer
 	RunFunc   Runner

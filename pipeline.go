@@ -69,7 +69,7 @@ func (p *Pipeline) Watch(watchDir string) (d string, err error) {
 	}
 	p.Watches = append(p.Watches, d)
 	if p.watcher != nil {
-		p.watcher.Add(d)
+		err = p.watcher.Add(d)
 	}
 
 	return
@@ -85,7 +85,7 @@ func (p *Pipeline) WatchRecursive(watchDir string, ignoreHidden bool) error {
 		p.recDirs = make(map[string]bool)
 	}
 	p.recDirs[d] = ignoreHidden
-	filepath.Walk(d, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(d, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return nil
 		}
@@ -93,7 +93,7 @@ func (p *Pipeline) WatchRecursive(watchDir string, ignoreHidden bool) error {
 			if IsHidden(info.Name()) && ignoreHidden {
 				return filepath.SkipDir
 			}
-			p.Watch(path)
+			_, err = p.Watch(path)
 		}
 		return nil
 	})
@@ -145,8 +145,10 @@ func (p *Pipeline) Start() {
 
 	// Add the watch directories to the watcher
 	for _, w := range p.Watches {
-		watcher.Add(w)
-		if p.Verbose {
+		if err := watcher.Add(w); err != nil {
+			fmt.Fprint(p.Wout, err)
+
+		} else if p.Verbose {
 			fmt.Fprintf(p.Wout, "> Watching %v\n", w)
 		}
 	}
@@ -241,6 +243,28 @@ func (p *Pipeline) queryWorkflow() chan<- fsnotify.Event {
 	return in
 }
 
+// matchNewRec checks if an event is adding or renaming a directory in a recursive watch
+// reruns WatchRecursive if it is
+func (p *Pipeline) matchNewRec(e fsnotify.Event) {
+	fi, err := os.Stat(e.Name)
+	if err == nil && fi.IsDir() && dirOps&e.Op == e.Op {
+		h := IsHidden(e.Name)
+		for dir, iHidden := range p.recDirs {
+			if h && iHidden {
+				continue
+			}
+			if _, err := filepath.Rel(dir, e.Name); err == nil {
+				if err := p.WatchRecursive(dir, iHidden); err != nil {
+					fmt.Fprint(p.Wout, err)
+				} else if p.Verbose {
+					fmt.Fprintf(p.Wout, "> Detected new watch %v\n", e.Name)
+				}
+				break
+			}
+		}
+	}
+}
+
 // queryRecDir checks if an event is adding or renaming a directory in a recursive watch
 // returns a write channel that the caller should close
 func (p *Pipeline) queryRecDir() chan<- fsnotify.Event {
@@ -250,22 +274,7 @@ func (p *Pipeline) queryRecDir() chan<- fsnotify.Event {
 		for {
 			select {
 			case e := <-in:
-				fi, err := os.Stat(e.Name)
-				if err == nil && fi.IsDir() && dirOps&e.Op == e.Op {
-					h := IsHidden(e.Name)
-					for dir, iHidden := range p.recDirs {
-						if h && iHidden {
-							continue
-						}
-						if _, err := filepath.Rel(dir, e.Name); err == nil {
-							p.WatchRecursive(dir, iHidden)
-							if p.Verbose {
-								fmt.Fprintf(p.Wout, "> Detected new watch %v\n", e.Name)
-							}
-							break
-						}
-					}
-				}
+				p.matchNewRec(e)
 			case <-p.done:
 				return
 			}
@@ -279,7 +288,7 @@ func (p *Pipeline) Stop() (err error) {
 	if p.done == nil || p.watcher == nil {
 		return errors.New("Pipeline was not started or has not completed")
 	}
-	p.watcher.Close()
+	err = p.watcher.Close()
 	close(p.done)
 	if p.Verbose {
 		fmt.Fprintln(p.Wout, "> Pipeline stopped")

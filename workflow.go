@@ -79,7 +79,7 @@ func (wf *Workflow) runner(info *TaskInfo) {
 		info.Target = "" // reset the Target
 		if err = t.Run(info); err != nil {
 			fmt.Fprintln(info.Terr, err)
-			fmt.Fprintf(info.Terr, "Fail! Workflow did not complete for %v\n\n\n", fname)
+			fmt.Fprintf(info.Terr, "Fail! Workflow %v did not complete for %v\n\n\n", wf.Name, fname)
 			return
 		}
 		if info.Target != "" {

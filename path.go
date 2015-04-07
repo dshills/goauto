@@ -13,8 +13,7 @@ import (
 // AbsPath is a utility function to get the absolute path from a path
 // It will first check for an absolute path then GOPATH relative then a pwd relative
 // will return an error for a path that does not exist
-func AbsPath(path string) (string, error) {
-	var ap string
+func AbsPath(path string) (ap string, err error) {
 
 	// Check for absolute path
 	if filepath.IsAbs(path) {
@@ -26,18 +25,17 @@ func AbsPath(path string) (string, error) {
 
 	// Check for GOPATH relative
 	for _, gp := range GoPaths() {
-		ap := filepath.Clean(filepath.Join(gp, path))
-		_, err := os.Stat(ap)
+		ap = filepath.Clean(filepath.Join(gp, path))
+		_, err = os.Stat(ap)
 		if err == nil {
-			return ap, nil
+			return
 		}
-		println(err.Error())
 	}
 
-	ap, err := filepath.Abs(path)
+	ap, err = filepath.Abs(path)
 	if err == nil {
-		if _, err := os.Stat(ap); err == nil {
-			return ap, nil
+		if _, err = os.Stat(ap); err == nil {
+			return
 		}
 	}
 
