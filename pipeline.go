@@ -4,6 +4,7 @@
 package goauto
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -39,7 +40,6 @@ type Pipeline struct {
 	Verbose    bool
 	watcher    *fsnotify.Watcher
 	events     chan []fsnotify.Event
-	rde        chan []fsnotify.Event
 	done       chan bool
 	recDirs    map[string]bool
 }
@@ -107,43 +107,9 @@ func (p *Pipeline) Add(ws ...Workflower) {
 	}
 }
 
-// bufferEvents watches for file events and batches them up based on a timer
-// **Thanks to github.com/egonelbre for the suggestions and examples for batch events
-func (p *Pipeline) bufferEvents() {
-	tick := time.Tick(batchTick)
-	evs := make([]fsnotify.Event, 0, 10)
-	var outCh chan []fsnotify.Event
-
-	for {
-		select {
-		// buffer the events
-		case event := <-p.watcher.Events:
-			evs = append(evs, event)
-		// check if we have any stuff
-		case <-tick:
-			if len(evs) == 0 {
-				continue
-			}
-			// allow send
-			outCh = p.events
-		// if nil skip, otherwise send when it's ready
-		case outCh <- evs:
-			evs = []fsnotify.Event{}
-			outCh = nil
-		}
-	}
-}
-
 // Start begins watching for changes to files in the Watches directories
 // Detected file changes will be compared with workflow regexp and if match will run the workflow tasks
 func (p *Pipeline) Start() {
-
-	// Make the channels to batch the events and signal done
-	p.done = make(chan bool)
-	p.events = make(chan []fsnotify.Event)
-	// Channel for checking on recursive directories
-	// We buffer it because we don't care if it gets behind the workflows
-	p.rde = make(chan []fsnotify.Event, 25)
 
 	if p.Wout == nil {
 		p.Wout = os.Stdout
@@ -171,11 +137,11 @@ func (p *Pipeline) Start() {
 	}
 	p.watcher = watcher
 
-	// evaluate dir changes
-	go p.queryRecDir()
-
-	// start watching
-	go p.bufferEvents()
+	// setup the com channels
+	p.done = make(chan bool)
+	p.bufferEvents()
+	qdc := p.queryRecDir()
+	qwc := p.queryWorkflow()
 
 	// Add the watch directories to the watcher
 	for _, w := range p.Watches {
@@ -185,47 +151,107 @@ func (p *Pipeline) Start() {
 		}
 	}
 
-	// block and wait to receive batched events
-outer:
+	// block
+	p.distributeEvents(qdc, qwc)
+}
+
+// bufferEvents watches for file events and batches them up based on a timer
+// if the event distributer is busy it just keeps batching up events
+// **Thanks to github.com/egonelbre for the suggestions and examples for batch events
+func (p *Pipeline) bufferEvents() {
+	p.events = make(chan []fsnotify.Event)
+
+	go func() {
+		defer func() {
+			close(p.events)
+		}()
+
+		tick := time.Tick(batchTick)
+		buf := make([]fsnotify.Event, 0, 10)
+		var out chan []fsnotify.Event
+
+		for {
+			select {
+			// buffer the events
+			case event := <-p.watcher.Events:
+				buf = append(buf, event)
+			// check if we have any events
+			case <-tick:
+				if len(buf) > 0 {
+					out = p.events
+				}
+			// if nil skip, otherwise send when it's ready
+			case out <- buf:
+				buf = make([]fsnotify.Event, 0, 10)
+				out = nil
+			case <-p.done:
+				return
+			}
+		}
+	}()
+}
+
+// distributeEvents sends batched events to a list of write channels
+// when finished it closes the write channels
+func (p *Pipeline) distributeEvents(cs ...chan<- fsnotify.Event) {
+	defer func() {
+		for _, c := range cs {
+			close(c)
+		}
+	}()
+
 	for {
 		select {
-		case evs := <-p.events:
-			p.rde <- evs
-			for _, e := range evs {
-				p.queryWorkflow(e.Name, uint32(e.Op))
+		case d := <-p.events:
+			if d == nil {
+				return
 			}
-		case <-p.done:
-			break outer
+			for _, e := range d {
+				for _, c := range cs {
+					select {
+					case c <- e:
+					case <-p.done:
+						return
+					}
+				}
+			}
 		}
 	}
-	close(p.done)
 }
 
 // queryWorkflow checks for file match for each workflow and if matches executes the workflow tasks
-func (p *Pipeline) queryWorkflow(fpath string, op uint32) {
-	// Actually gets in the way of debugging but on occasion...
-	//if p.Verbose {
-	//	fmt.Fprintf(p.Wout, ">> Watcher event %v %v\n", fpath, op)
-	//}
-	for _, wf := range p.Workflows {
-		if wf.Match(fpath, op) {
-			wf.Run(&TaskInfo{Src: fpath, Tout: p.Wout, Terr: p.Werr, Verbose: p.Verbose})
+// returns a write channel that the caller should close
+func (p *Pipeline) queryWorkflow() chan<- fsnotify.Event {
+	in := make(chan fsnotify.Event)
+
+	go func() {
+		for {
+			select {
+			case e := <-in:
+				for _, wf := range p.Workflows {
+					if wf.Match(e.Name, uint32(e.Op)) {
+						wf.Run(&TaskInfo{Src: e.Name, Tout: p.Wout, Terr: p.Werr, Verbose: p.Verbose})
+					}
+				}
+			case <-p.done:
+				return
+			}
 		}
-	}
+	}()
+	return in
 }
 
 // queryRecDir checks if an event is adding or renaming a directory in a recursive watch
-// This should use a buffered channel so it doesn't slow down the worklists
-func (p *Pipeline) queryRecDir() {
-	for {
-		select {
-		case evs := <-p.rde:
-			for _, e := range evs {
+// returns a write channel that the caller should close
+func (p *Pipeline) queryRecDir() chan<- fsnotify.Event {
+	in := make(chan fsnotify.Event)
+
+	go func() {
+		for {
+			select {
+			case e := <-in:
 				fi, err := os.Stat(e.Name)
-				switch {
-				case err != nil || !fi.IsDir():
-					break
-				case dirOps&e.Op == e.Op:
+				if err == nil && fi.IsDir() && dirOps&e.Op == e.Op {
 					h := IsHidden(e.Name)
 					for dir, iHidden := range p.recDirs {
 						if h && iHidden {
@@ -240,28 +266,23 @@ func (p *Pipeline) queryRecDir() {
 						}
 					}
 				}
+			case <-p.done:
+				return
 			}
 		}
-	}
+	}()
+	return in
 }
 
 // Stop will discontinue watching for file changes
-func (p *Pipeline) Stop() {
-	// Not sure about all this
-	// Only required if Stop is called before calling Start
-	// or calling Stop before Start can get rolling
-	if p.done != nil { // do we have a channel?
-		select {
-		case <-p.done: // is it closed?
-		default: // all good go for it
-			p.done <- true
-		}
+func (p *Pipeline) Stop() (err error) {
+	if p.done == nil || p.watcher == nil {
+		return errors.New("Pipeline was not started or has not completed")
 	}
-
-	if p.watcher != nil {
-		p.watcher.Close()
-	}
+	p.watcher.Close()
+	close(p.done)
 	if p.Verbose {
 		fmt.Fprintln(p.Wout, "> Pipeline stopped")
 	}
+	return
 }

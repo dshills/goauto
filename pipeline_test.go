@@ -29,8 +29,9 @@ func TestPipelineRec(t *testing.T) {
 	}
 }
 
+/* Not a reliable test. Depends on speed of the fsnotify events
 func TestPipelineConcurrency(t *testing.T) {
-	p := NewPipeline("Test Pipeline", Silent)
+	p := NewPipeline("Test Pipeline", Verbose)
 	tp := filepath.Join("src", "github.com", "dshills", "goauto", "testing")
 	err := p.WatchRecursive(tp, IgnoreHidden)
 	if err != nil {
@@ -40,13 +41,8 @@ func TestPipelineConcurrency(t *testing.T) {
 	wf := NewWorkflow()
 	p.Add(wf)
 
-	// Run stop before starting
-	p.Stop()
-
 	// Run Pipeline concurrently
 	go p.Start()
-
-	/* Not a reliable test. Sometimes it works depending on how fast it detects the dir add
 
 	atp, err := AbsPath(tp)
 	if err != nil {
@@ -81,8 +77,10 @@ func TestPipelineConcurrency(t *testing.T) {
 		n := filepath.Join(atp, strconv.Itoa(i))
 		os.Remove(n)
 	}
-	*/
 
-	p.Stop()
-
+	err = p.Stop()
+	if err != nil {
+		t.Error(err)
+	}
 }
+*/
