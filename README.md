@@ -182,6 +182,7 @@ GoAuto includes a number of pre built tasks that can be used directly.
 * NewGoBuildTask will run build for a project
 * NewGoInstallTask will run install for a project
 * NewGoLintTask will run golint for a project
+* NewGoMetaLinter task for github.com/alecthomas/gometalinter
 
 ##### goauto/shelltask
 
