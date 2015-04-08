@@ -68,7 +68,9 @@ func cat(info *goauto.TaskInfo) (err error) {
 	if err != nil {
 		return
 	}
-	defer in.Close()
+	defer func() {
+		err = in.Close()
+	}()
 	info.Buf.Reset()
 	_, err = info.Buf.ReadFrom(in)
 	if err != nil {
@@ -138,7 +140,9 @@ func fcopy(info *goauto.TaskInfo) (err error) {
 	if err != nil {
 		return
 	}
-	defer in.Close()
+	defer func() {
+		err = in.Close()
+	}()
 
 	out, err := os.Create(info.Target)
 	if err != nil {
@@ -158,4 +162,10 @@ func fcopy(info *goauto.TaskInfo) (err error) {
 	}
 
 	return out.Sync()
+}
+
+// NewWFCompleteTask returns a task that simply outputs a Workflow completed message
+// for those of us who like a little feedback
+func NewWFCompleteTask(name string) goauto.Tasker {
+	return NewShellTask("echo", ">> "+name+" complete")
 }

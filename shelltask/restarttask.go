@@ -39,7 +39,9 @@ func (r *RestartTask) Restart(t *goauto.TaskInfo) (err error) {
 	r.ecmd.Stderr = t.Terr
 
 	err = r.ecmd.Start()
-	go r.ecmd.Wait()
+	go func() {
+		err = r.ecmd.Wait()
+	}()
 	if t.Verbose {
 		fmt.Fprintf(t.Tout, "Process %v started\n", r.Cmd)
 	}
