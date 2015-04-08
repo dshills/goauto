@@ -268,7 +268,7 @@ func (p *Pipeline) matchNewRec(e fsnotify.Event) {
 // queryRecDir checks if an event is adding or renaming a directory in a recursive watch
 // returns a write channel that the caller should close
 func (p *Pipeline) queryRecDir() chan<- fsnotify.Event {
-	in := make(chan fsnotify.Event)
+	in := make(chan fsnotify.Event, 10) // bursts of events often come in, try not to slow the workflows down
 
 	go func() {
 		for {
