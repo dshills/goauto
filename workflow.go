@@ -88,7 +88,6 @@ func (wf *Workflow) runner(info *TaskInfo) {
 			info.Collect = append(info.Collect, info.Target)
 		}
 	}
-	fmt.Fprintln(info.Tout, "")
 }
 
 // Run will start the execution of tasks
