@@ -46,7 +46,7 @@ func (st *shellTask) Run(info *goauto.TaskInfo) (err error) {
 	cmd.Stderr = info.Terr
 
 	defer func() {
-		fmt.Fprint(info.Tout, info.Buf)
+		fmt.Fprint(info.Tout, info.Buf.String())
 		if err != nil && info.Verbose {
 			t1 := time.Now()
 			fmt.Fprintf(info.Tout, ">>> %v %v %v\n", st.cmd, st.args, t1.Sub(t0))
@@ -164,8 +164,21 @@ func fcopy(info *goauto.TaskInfo) (err error) {
 	return out.Sync()
 }
 
-// NewWFCompleteTask returns a task that simply outputs a Workflow completed message
+// NewEchoTask returns a task that echos args
 // for those of us who like a little feedback
-func NewWFCompleteTask(name string) goauto.Tasker {
-	return NewShellTask("echo", ">> "+name+" complete")
+func NewEchoTask(args ...string) goauto.Tasker {
+	return NewShellTask("echo", args...)
+}
+
+type lineTask struct{}
+
+// NewLineTask returns a task the inserts a new blank line in the output
+func NewLineTask() goauto.Tasker {
+	return &lineTask{}
+}
+
+// Run will execute the task
+func (lt *lineTask) Run(info *goauto.TaskInfo) (err error) {
+	fmt.Fprintln(info.Tout)
+	return
 }
