@@ -50,8 +50,8 @@ func (wf *Workflow) WatchOp(op Op) {
 }
 
 // Match checks a file name against the regexp of the Workflow and the file operation
-func (wf *Workflow) Match(fpath string, op uint32) bool {
-	if uint32(wf.Op)&op == op {
+func (wf *Workflow) Match(fpath string, op Op) bool {
+	if wf.Op&op == op {
 		for _, r := range wf.Regexs {
 			if r.MatchString(fpath) {
 				return true

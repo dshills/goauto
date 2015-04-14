@@ -2,7 +2,7 @@
 >"What makes you so ashamed of being a grownup?" - The War Doctor
 
 ## Overview
-**NOTE** There have been a number of changes to the internals and the API since first release. The API should now be approaching stable.
+**UPDATE** Pipeline now includes an experimental flag OSX. If you are using OS X and have received the "To many open files" warning this is an attempt to fix it. The watcher code has now been extracted into it's own interface and can use the experimental OSX events package https://github.com/go-fsnotify/fsevents. I have done heavy testing locally with no problems but your mileage may vary. This should have no affect on the current usage of GoAuto.
 
 Task automation for grownups. GoAuto is a package that makes building a native executable tailored to a specific work flow, simple. 
 
@@ -21,6 +21,7 @@ import (
 func main() {
 	// Create a pipeline (Develop using Verbose, Change to Silent after testing)
 	p := goauto.NewPipeline("Go Pipeline", goauto.Verbose)
+	defer p.Stop()
 
 	// Watch directories recursivly, ignoring hidden directories
 	wd := filepath.Join("src", "github.com", "me", "myproject")
