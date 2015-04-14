@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.1.5](https://github.com/dshills/goauto/tree/0.1.5) (2015-04-14)
+
+**Enhancements:**
+* Experimental OSX FSEvent support
+* Watcher interface for supporting multiple types of file system watchers
+
 ## [0.1.4](https://github.com/dshills/goauto/tree/0.1.4) (2015-04-05)
 
 **Enhancements:**
