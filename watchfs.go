@@ -16,6 +16,7 @@ type watchFS struct {
 	watcher *fsnotify.Watcher
 	out     io.Writer
 	done    chan struct{}
+	send    chan ESlice
 }
 
 // NewWatchFS creates a new filesystem watcher
@@ -30,6 +31,7 @@ func (w *watchFS) SetVerbose(out io.Writer) {
 func (w *watchFS) Start(latency time.Duration, paths []string) (<-chan ESlice, error) {
 	w.done = make(chan struct{})
 	c := make(chan ESlice)
+	w.send = c
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -93,7 +95,11 @@ func (w *watchFS) Stop() error {
 	if w.out != nil {
 		fmt.Fprintln(w.out, "Watcher stopped")
 	}
-	close(w.done)
+	select {
+	case <-w.done:
+	default:
+		close(w.done)
+	}
 	err := w.watcher.Close()
 	w.watcher = nil
 	return err

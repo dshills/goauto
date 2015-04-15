@@ -16,6 +16,7 @@ type watchOSX struct {
 	out         io.Writer
 	eventStream *fsevents.EventStream
 	done        chan struct{}
+	send        chan ESlice
 }
 
 // NewWatchOSX returns a OSX specific file system watcher
@@ -55,6 +56,7 @@ func (w *watchOSX) convertFlags(e fsevents.Event) Op {
 func (w *watchOSX) Start(latency time.Duration, paths []string) (<-chan ESlice, error) {
 	w.done = make(chan struct{})
 	c := make(chan ESlice)
+	w.send = c
 	w.eventStream.Paths = paths
 	w.eventStream.Latency = latency
 
@@ -64,42 +66,58 @@ func (w *watchOSX) Start(latency time.Duration, paths []string) (<-chan ESlice, 
 		}
 	}
 
-	go func() {
-		defer func() {
-			close(c)
-			if w.out != nil {
-				fmt.Fprintln(w.out, "Closing watcher channel")
-			}
-		}()
-		for {
-			select {
-			case msg := <-w.eventStream.Events:
-				buf := make([]*Event, 0, len(msg))
-				for _, e := range msg {
-					buf = append(buf, &Event{Path: e.Path, Op: w.convertFlags(e)})
-					if w.out != nil {
-						fmt.Fprintln(w.out, Event{Path: e.Path, Op: w.convertFlags(e)})
-					}
-				}
-				c <- buf
-			case <-w.done:
-				return
-			}
-		}
-	}()
-
+	go w.bufferEvents(c, latency)
 	w.eventStream.Start()
 	return c, nil
 }
 
+// bufferEvents watches for file events and batches them up based on a timer
+// if the event distributer is busy it just keeps batching up events
+// **Thanks to github.com/egonelbre for the suggestions and examples for batch events
+func (w *watchOSX) bufferEvents(send chan<- ESlice, l time.Duration) {
+	defer close(send)
+
+	tick := time.Tick(l)
+	buf := make(ESlice, 0, 10)
+	var out chan<- ESlice
+
+	for {
+		select {
+		// buffer the events
+		case msg := <-w.eventStream.Events:
+			for _, e := range msg {
+				buf = append(buf, &Event{Path: e.Path, Op: w.convertFlags(e)})
+				if w.out != nil {
+					fmt.Fprintln(w.out, Event{Path: e.Path, Op: w.convertFlags(e)})
+				}
+			}
+		// check if we have any events
+		case <-tick:
+			if len(buf) > 0 {
+				out = send
+			}
+		// if nil skip, otherwise send when it's ready
+		case out <- buf:
+			buf = make(ESlice, 0, 10)
+			out = nil
+		case <-w.done:
+			return
+		}
+	}
+}
+
 func (w *watchOSX) Stop() error {
-	if w.done == nil || w.eventStream == nil {
+	if w.done == nil || w.eventStream == nil || w.send == nil {
 		return errors.New("Watcher not started or already stopped")
 	}
 	if w.out != nil {
 		fmt.Fprintln(w.out, "Watcher stopped")
 	}
-	close(w.done)
+	select {
+	case <-w.done:
+	default:
+		close(w.done)
+	}
 	w.eventStream.Stop()
 	return nil
 }
