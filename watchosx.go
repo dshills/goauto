@@ -33,22 +33,23 @@ func (w *watchOSX) SetVerbose(out io.Writer) {
 }
 
 func (w *watchOSX) convertFlags(e fsevents.Event) Op {
+	var f Op
 	if e.Flags&fsevents.ItemCreated == fsevents.ItemCreated {
-		return Create
+		f |= Create
 	}
 	if e.Flags&fsevents.ItemRemoved == fsevents.ItemRemoved {
-		return Remove
+		f |= Remove
 	}
 	if e.Flags&fsevents.ItemRenamed == fsevents.ItemRenamed {
-		return Rename
+		f |= Rename
 	}
 	if e.Flags&fsevents.ItemModified == fsevents.ItemModified {
-		return Write
+		f |= Write
 	}
 	if e.Flags&fsevents.ItemInodeMetaMod == fsevents.ItemInodeMetaMod {
-		return Chmod
+		f |= Chmod
 	}
-	return 0
+	return f
 }
 
 func (w *watchOSX) Start(latency time.Duration, paths []string) (<-chan ESlice, error) {

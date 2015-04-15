@@ -49,9 +49,25 @@ func (wf *Workflow) WatchOp(op Op) {
 	wf.Op = op
 }
 
+func (wf *Workflow) matchOp(op Op) bool {
+	switch {
+	case wf.Op&Create == op&Create:
+		return true
+	case wf.Op&Write == op&Write:
+		return true
+	case wf.Op&Remove == op&Remove:
+		return true
+	case wf.Op&Rename == op&Rename:
+		return true
+	case wf.Op&Chmod == op&Chmod:
+		return true
+	}
+	return false
+}
+
 // Match checks a file name against the regexp of the Workflow and the file operation
 func (wf *Workflow) Match(fpath string, op Op) bool {
-	if wf.Op&op == op {
+	if wf.matchOp(op) {
 		for _, r := range wf.Regexs {
 			if r.MatchString(fpath) {
 				return true
