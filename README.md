@@ -23,7 +23,7 @@ func main() {
 	p := goauto.NewPipeline("Go Pipeline", goauto.Verbose)
 	defer p.Stop()
 
-	// Watch directories recursivly, ignoring hidden directories
+	// Watch directories recursively, ignoring hidden directories
 	wd := filepath.Join("src", "github.com", "me", "myproject")
 	if err := p.WatchRecursive(wd, goauto.IgnoreHidden); err != nil {
 		panic(err)
@@ -70,7 +70,7 @@ func main() {
 Building a general purpose build tool with GoAuto that used config files would be a fairly trivial project. Feel free if that is your thing.
 
 
-## Instalation
+## Installation
 	go get github.com/dshills/goauto
 	
 ## Concepts
@@ -93,7 +93,7 @@ Watches can be absolute or $GOPATH relative.
 // Create a pipeline
 p := goauto.NewPipeline("Go Pipeline", goauto.Verbose)
 
-// watch directories recursivly, ignoring hidden directories
+// watch directories recursively, ignoring hidden directories
 wd := filepath.Join("src", "github.com", "myprojects")
 if err := p.WatchRecursive(wd, goauto.IgnoreHidden); err != nil {
 	panic(err)
@@ -285,7 +285,7 @@ Here it is written as a Tasker. In this case we don't need a Transformer because
 ```go
 type myCatTask struct{}
 func (t *myCatTask)Run(i *goauto.TaskInfo) (err error) {
-	i.Target = i.Src // Not changing the file name so not technically required but a good habbit
+	i.Target = i.Src // Not changing the file name so not technically required but a good habit
 	cmd := exec.Command("cat", i.Target)
 	i.Buf.Reset()
 	cmd.Stdout = &i.Buf // Write the output to the buffer
@@ -299,7 +299,7 @@ func (t *myCatTask)Run(i *goauto.TaskInfo) (err error) {
 
 ## To Do
 * More built ins for Web development LESS, Reload (Certainly can be done now but it would be nice to have built ins)
-* Test large, concurrent, multi Pipeline, multi Worflow systems
+* Test large, concurrent, multi Pipeline, multi Workflow systems
 
 ## Alternatives
 
