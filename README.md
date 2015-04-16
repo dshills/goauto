@@ -2,11 +2,9 @@
 >"What makes you so ashamed of being a grownup?" - The War Doctor
 
 ## Overview
-**UPDATE** Pipeline now includes an experimental flag OSX. If you are using OS X and have received the "To many open files" warning this is an attempt to fix it. The watcher code has now been extracted into it's own interface and can use the experimental OSX events package https://github.com/go-fsnotify/fsevents. I have done heavy testing locally with no problems but your mileage may vary. This should have no affect on the current usage of GoAuto.
-
 Task automation for grownups. GoAuto is a package that makes building a native executable tailored to a specific work flow, simple. 
 
-Here is a complete example of a Go build and test process triggered by any source file in a project changing. The workflows are run concurrently.
+Here is a complete example of a Go build and test process triggered by any source file in a project changing. 
 
 ```go
 package main
@@ -29,28 +27,20 @@ func main() {
 		panic(err)
 	}
 
-	// Create an install workflow, don't wait for the tests to run
-	wf := goauto.NewWorkflow(gotask.NewGoVetTask(), gotask.NewGoLintTask(), gotask.NewGoInstallTask())
-	wf.Name = "Install"
-	wf.Concurrent = true
+	// Create a workflow
+	wf := goauto.NewWorkflow(
+					gotask.NewGoVetTask(), 
+					gotask.NewGoLintTask(), 
+					gotask.NewGoTestTask(),
+					gotask.NewGoInstallTask())
 
 	// Add a file pattern to match
 	if err := wf.WatchPattern(".*\\.go$"); err != nil {
 		panic(err)
 	}
 
-	// Create a Test workflow
-	wf2 := goauto.NewWorkflow(gotask.NewGoTestTask())
-	wf2.Name = "Test"
-	wf2.Concurrent = true
-
-	// Add a file pattern to match
-	if err := wf2.WatchPattern(".*\\.go$"); err != nil {
-		panic(err)
-	}
-
-	// Add workflows to pipeline
-	p.Add(wf, wf2)
+	// Add workflow to pipeline
+	p.Add(wf)
 
 	// start the pipeline, it will block
 	p.Start()
@@ -125,6 +115,9 @@ go p.Start()
 
 p.Stop()
 ```
+
+**UPDATE** Pipeline now includes an experimental flag OSX. If you are using OS X and have received the "To many open files" warning this is an attempt to fix it. The watcher code has now been extracted into it's own interface and can use the experimental OSX events package https://github.com/go-fsnotify/fsevents. I have done heavy testing locally with no problems but your mileage may vary. This should have no affect on the current usage of GoAuto.
+
 
 ### Workflows
 
