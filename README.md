@@ -5,6 +5,7 @@
 Task automation for grownups. GoAuto is a package that makes building a native executable tailored to a specific work flow, simple. 
 
 Here is a complete example of a Go build and test process triggered by any source file in a project changing. 
+** NOTE ** If you are using OS X consider turning on the experimental OSX flag for Pipelines to avoid the "To many Open Files" error. W
 
 ```go
 package main
