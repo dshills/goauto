@@ -66,8 +66,8 @@ func (w *watchOSX) Start(latency time.Duration, paths []string) (<-chan ESlice, 
 		}
 	}
 
-	go w.bufferEvents(c, latency)
 	w.eventStream.Start()
+	go w.bufferEvents(c, latency)
 	return c, nil
 }
 
